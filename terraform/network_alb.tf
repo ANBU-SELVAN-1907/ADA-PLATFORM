@@ -10,6 +10,12 @@ variable "app_name" {
   default = "deloitte-ai-insights"
 }
 
+variable "ecr_repo_url" {
+  description = "The ECR registry registry URL"
+  type        = string
+}
+
+
 # --- VPC & Networking ---
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
