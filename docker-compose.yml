@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      # FRONTEND_URL defines allowed CORS origins. Nginx is exposing on 8080.
+      - FRONTEND_URL=http://localhost:8080
+      - ADA_OMNIROUTE_API_KEY=${ADA_OMNIROUTE_API_KEY}
+      - ADA_OMNIROUTE_BASE_URL=${ADA_OMNIROUTE_BASE_URL:-http://localhost:20128/v1}
+      - ADA_GITHUB_TOKEN=${ADA_GITHUB_TOKEN}
+      - ADA_MAX_CONCURRENT_AGENTS=${ADA_MAX_CONCURRENT_AGENTS:-6}
+      - ADA_AGENT_TIMEOUT_SEC=${ADA_AGENT_TIMEOUT_SEC:-60}
+      - ADA_LLM_TEMPERATURE=${ADA_LLM_TEMPERATURE:-0.2}
+      - ADA_LLM_MAX_TOKENS=${ADA_LLM_MAX_TOKENS:-6000}
+    volumes:
+      - ./output:/app/output
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend

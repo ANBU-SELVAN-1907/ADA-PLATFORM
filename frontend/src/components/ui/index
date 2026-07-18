@@ -1,0 +1,169 @@
+import React from 'react'
+import { motion } from 'framer-motion'
+import { useStore } from '../../store'
+
+/* ─────────────────────────────────────────────
+   Shared UI primitives — eliminates per-screen duplication (audit fix #7)
+   ───────────────────────────────────────────── */
+
+// ─── Tabs ──────────────────────────────────────
+export interface TabItem {
+  id: string
+  label: string
+  icon?: React.ReactNode
+}
+
+interface TabsProps {
+  tabs: TabItem[]
+  activeId: string
+  onChange: (id: string) => void
+  className?: string
+  /** Accessible label for the tablist */
+  label: string
+}
+
+export function Tabs({ tabs, activeId, onChange, className = '', label }: TabsProps) {
+  const reducedMotion = useStore((s) => s.reducedMotion)
+
+  return (
+    <div
+      role="tablist"
+      aria-label={label}
+      className={`flex items-center gap-1 p-1 rounded-xl bg-surface-elevated/60 border border-surface-border/50 ${className}`}
+    >
+      {tabs.map((tab) => {
+        const active = tab.id === activeId
+        return (
+          <button
+            key={tab.id}
+            role="tab"
+            id={`tab-${tab.id}`}
+            aria-selected={active}
+            aria-controls={`tabpanel-${tab.id}`}
+            tabIndex={active ? 0 : -1}
+            onClick={() => onChange(tab.id)}
+            className={`relative flex items-center gap-1.5 px-3.5 py-2 text-caption font-medium rounded-lg transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-discovery/40 ${
+              active ? 'text-text-primary' : 'text-text-muted hover:text-text-secondary'
+            }`}
+          >
+            {active && !reducedMotion && (
+              <motion.div
+                layoutId="tab-pill"
+                className="absolute inset-0 rounded-lg bg-surface-card border border-surface-border shadow-card"
+                transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+              />
+            )}
+            {active && reducedMotion && (
+              <div className="absolute inset-0 rounded-lg bg-surface-card border border-surface-border" />
+            )}
+            {tab.icon && <span className="relative z-10">{tab.icon}</span>}
+            <span className="relative z-10">{tab.label}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Toggle Switch ────────────────────────────
+interface ToggleProps {
+  checked: boolean
+  onChange: (checked: boolean) => void
+  label: string
+  description?: string
+  size?: 'sm' | 'md'
+}
+
+export function Toggle({ checked, onChange, label, description, size = 'md' }: ToggleProps) {
+  const reducedMotion = useStore((s) => s.reducedMotion)
+  const dims = size === 'sm' ? { track: 'w-10 h-6', thumb: 'w-5 h-5', translate: 'x-5' } : { track: 'w-12 h-7', thumb: 'w-6 h-6', translate: 'x-5' }
+
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex ${dims.track} items-center rounded-full transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-discovery/40 focus-visible:ring-offset-2 focus-visible:ring-offset-surface-base ${
+        checked ? 'bg-discovery/80' : 'bg-surface-border'
+      }`}
+    >
+      <motion.span
+        className={`inline-block ${dims.thumb} rounded-full bg-white shadow-card`}
+        animate={{ x: checked ? 20 : 2 }}
+        transition={reducedMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 30 }}
+        style={{ x: checked ? (size === 'sm' ? 20 : 20) : 2 }}
+      />
+      <span className="sr-only">{label}</span>
+    </button>
+  )
+}
+
+// ─── Icon Button ──────────────────────────────
+interface IconButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  icon: React.ReactNode
+  label: string
+  variant?: 'ghost' | 'solid'
+}
+
+export function IconButton({ icon, label, variant = 'ghost', className = '', ...props }: IconButtonProps) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      className={`p-2.5 rounded-xl transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-discovery/40 ${
+        variant === 'ghost'
+          ? 'text-text-muted hover:text-text-primary hover:bg-white/5'
+          : 'bg-surface-card text-text-primary border border-surface-border hover:border-surface-border-active'
+      } ${className}`}
+      {...props}
+    >
+      {icon}
+    </button>
+  )
+}
+
+// ─── Section Card ─────────────────────────────
+interface SectionCardProps {
+  title?: string
+  icon?: React.ReactNode
+  accent?: string
+  children: React.ReactNode
+  className?: string
+}
+
+export function SectionCard({ title, icon, accent, children, className = '' }: SectionCardProps) {
+  return (
+    <section className={`neo-card ${className}`}>
+      {title && (
+        <header className="flex items-center gap-2.5 px-6 pt-5 pb-3 border-b border-surface-border/40">
+          {icon && <span className={accent}>{icon}</span>}
+          <h2 className="text-title font-semibold text-text-primary">{title}</h2>
+        </header>
+      )}
+      <div className="p-6">{children}</div>
+    </section>
+  )
+}
+
+// ─── Badge ────────────────────────────────────
+interface BadgeProps {
+  children: React.ReactNode
+  variant?: 'default' | 'accent'
+  accentClasses?: string
+  className?: string
+}
+
+export function Badge({ children, variant = 'default', accentClasses = '', className = '' }: BadgeProps) {
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-metadata font-medium border ${
+        variant === 'default' ? 'bg-surface-elevated/60 border-surface-border/50 text-text-secondary' : `${accentClasses}`
+      } ${className}`}
+    >
+      {children}
+    </span>
+  )
+}

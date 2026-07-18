@@ -1,0 +1,135 @@
+/* ─────────────────────────────────────────────
+   Design Tokens — CSS Custom Properties
+   Source of truth for runtime values not covered by Tailwind config.
+   Import in main.tsx: import './design/tokens.css'
+   ───────────────────────────────────────────── */
+
+:root {
+    /* ── Luxury Dark Theme (Default Base) ── */
+    --surface-base: #060A12;
+    --surface-elevated: #0B1120;
+    --surface-card: #121E30;
+    --surface-card-hover: #1A2940;
+    --surface-floating: #101828;
+    --surface-terminal: #05080F;
+    --surface-border: #1A2940;
+    --surface-border-subtle: #142036;
+    --surface-glass: rgba(11, 17, 32, 0.6);
+    --surface-glass-heavy: rgba(11, 17, 32, 0.85);
+    --surface-overlay: rgba(6, 10, 18, 0.88);
+
+    --text-primary: #EDF2FF;
+    --text-secondary: #9BA8BC;
+    --text-muted: #6B7A94;
+    --text-subtle: #4A5C75;
+    --text-inverse: #060A12;
+    --text-glow: rgba(237, 242, 255, 0.8);
+
+    /* ── Dark Layout Accents ── */
+    --canvas-bg: radial-gradient(ellipse 80% 80% at 50% 50%, rgba(134,188,37,0.04) 0%, rgba(6,10,18,0.98) 70%);
+    --canvas-border: rgba(255,255,255,0.06);
+    --canvas-shadow: 0 0 60px rgba(134,188,37,0.04) inset;
+    --canvas-dot: rgba(255, 255, 255, 0.03);
+
+    --card-bg: rgba(11, 17, 32, 0.75);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --card-shadow: none;
+
+    --glass-bg: rgba(11, 17, 32, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.06);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+    --orb-color-1: #86BC25;
+    --orb-color-2: #27272A;
+    --orb-opacity-1: 0.09;
+    --orb-opacity-2: 0.15;
+}
+
+.dark {
+    /* Keep .dark class variables identical to root dark variables */
+    --surface-base: #060A12;
+    --surface-elevated: #0B1120;
+    --surface-card: #121E30;
+    --surface-card-hover: #1A2940;
+    --surface-floating: #101828;
+    --surface-terminal: #05080F;
+    --surface-border: #1A2940;
+    --surface-border-subtle: #142036;
+    --surface-glass: rgba(11, 17, 32, 0.6);
+    --surface-glass-heavy: rgba(11, 17, 32, 0.85);
+    --surface-overlay: rgba(6, 10, 18, 0.88);
+
+    --text-primary: #EDF2FF;
+    --text-secondary: #9BA8BC;
+    --text-muted: #6B7A94;
+    --text-subtle: #4A5C75;
+    --text-inverse: #060A12;
+    --text-glow: rgba(237, 242, 255, 0.8);
+
+    --canvas-bg: radial-gradient(ellipse 80% 80% at 50% 50%, rgba(134,188,37,0.04) 0%, rgba(6,10,18,0.98) 70%);
+    --canvas-border: rgba(255,255,255,0.06);
+    --canvas-shadow: 0 0 60px rgba(134,188,37,0.04) inset;
+    --canvas-dot: rgba(255, 255, 255, 0.03);
+
+    --card-bg: rgba(11, 17, 32, 0.75);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --card-shadow: none;
+
+    --glass-bg: rgba(11, 17, 32, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.06);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+
+    --orb-color-1: #86BC25;
+    --orb-color-2: #27272A;
+    --orb-opacity-1: 0.09;
+    --orb-opacity-2: 0.15;
+}
+
+:root {
+
+    /* ── Domain accents ── */
+    --discovery: #86BC25;
+    --knowledge: #00A3E0;
+    --infra: #8B5CF6;
+    --security: #EF4444;
+    --security-medium: #F59E0B;
+    --security-low: #10B981;
+    --telemetry: #F59E0B;
+    --reports: #EC4899;
+
+    /* ── Motion easings ── */
+    --ease-entrance: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-state: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-emphasis: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* ── Motion durations ── */
+    --duration-fast: 150ms;
+    --duration-base: 200ms;
+    --duration-slow: 300ms;
+    --duration-entrance: 400ms;
+    --duration-hero: 600ms;
+
+    /* ── Radius scale ── */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+
+    /* ── Shadow scale ── */
+    --shadow-neo: 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
+    --shadow-panel: 0 4px 24px rgba(0, 0, 0, 0.4);
+    --shadow-modal: 0 32px 64px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    --shadow-glow-green: 0 0 20px rgba(134, 188, 37, 0.2);
+    --shadow-glow-green-sm: 0 0 8px rgba(134, 188, 37, 0.25);
+    --shadow-glow-blue: 0 0 20px rgba(0, 163, 224, 0.2);
+    --shadow-glow-purple: 0 0 20px rgba(139, 92, 246, 0.2);
+
+    /* ── Z-index scale ── */
+    --z-base: 0;
+    --z-content: 10;
+    --z-nav: 50;
+    --z-overlay: 100;
+    --z-modal: 200;
+    --z-toast: 300;
+}
