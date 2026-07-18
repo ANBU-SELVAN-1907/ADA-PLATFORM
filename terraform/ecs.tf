@@ -54,7 +54,7 @@ resource "aws_ecs_task_definition" "app" {
   container_definitions = jsonencode([
     {
       name      = "backend"
-      image     = "${var.ecr_repo_url}/backend:latest"
+      image     = "${var.ecr_repo_url}/ada/backend:latest"
       essential = true
       portMappings = [{ containerPort = 8000, hostPort = 8000 }]
       logConfiguration = {
@@ -75,9 +75,10 @@ resource "aws_ecs_task_definition" "app" {
     },
     {
       name      = "frontend"
-      image     = "${var.ecr_repo_url}/frontend:latest"
+      image     = "${var.ecr_repo_url}/ada/frontend:latest"
       essential = true
       portMappings = [{ containerPort = 80, hostPort = 80 }]
+
       dependsOn = [{ containerName = "backend", condition = "START" }]
       logConfiguration = {
         logDriver = "awslogs"
