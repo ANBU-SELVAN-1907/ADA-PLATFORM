@@ -9,8 +9,9 @@ env:
   AWS_REGION: us-east-1
   ECR_REPOSITORY_FRONTEND: ada/frontend
   ECR_REPOSITORY_BACKEND: ada/backend
-  ECS_SERVICE: deloitte-ai-insights-service
-  ECS_CLUSTER: deloitte-ai-insights-cluster
+  ECS_SERVICE: application-discovery-agent-service
+  ECS_CLUSTER: application-discovery-agent-cluster
+
 
 jobs:
   deploy:

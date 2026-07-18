@@ -12,7 +12,7 @@ variable "aws_region" {
 }
 
 variable "app_name" {
-  default = "deloitte-ai-insights"
+  default = "application-discovery-agent"
 }
 
 variable "ecr_repo_url" {
