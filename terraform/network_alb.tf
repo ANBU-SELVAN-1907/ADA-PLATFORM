@@ -121,3 +121,9 @@ resource "aws_lb_listener" "http" {
     target_group_arn = aws_lb_target_group.frontend.arn
   }
 }
+
+output "application_url" {
+  description = "The public URL of your deployed application"
+  value       = "http://${aws_lb.main.dns_name}"
+}
+
