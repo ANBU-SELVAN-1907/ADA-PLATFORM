@@ -20,6 +20,13 @@ variable "ecr_repo_url" {
   type        = string
 }
 
+variable "github_token" {
+  description = "GitHub API Token"
+  type        = string
+  default     = "INITIAL_PLACEHOLDER"
+}
+
+
 
 # --- VPC & Networking ---
 resource "aws_vpc" "main" {

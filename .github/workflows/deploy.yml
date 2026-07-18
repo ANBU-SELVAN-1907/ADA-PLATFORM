@@ -84,7 +84,9 @@ jobs:
       run: |
         cd terraform
         terraform apply -auto-approve \
-          -var="ecr_repo_url=${{ env.ECR_REGISTRY }}"
+          -var="ecr_repo_url=${{ env.ECR_REGISTRY }}" \
+          -var="github_token=${{ secrets.ADA_GITHUB_TOKEN }}"
+
 
     - name: Force ECS Deployment Refresh
       run: |

@@ -9,11 +9,7 @@ resource "aws_secretsmanager_secret_version" "api_keys_initial" {
   secret_id = aws_secretsmanager_secret.api_keys.id
   secret_string = jsonencode({
     omniroute = "INITIAL_PLACEHOLDER"
-    github    = "INITIAL_PLACEHOLDER"
+    github    = var.github_token
   })
-  
-  # Ignore changes so terraform doesn't overwrite manually updated keys
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
 }
+
