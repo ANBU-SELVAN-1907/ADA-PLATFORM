@@ -36,13 +36,18 @@ HIGH_SIGNAL_PATH_FRAGMENTS = [
 
 class GitHubService:
     def __init__(self, token: Optional[str] = None):
-        self.token = token or os.getenv("ADA_GITHUB_TOKEN", "")
+        raw_token = token or os.getenv("ADA_GITHUB_TOKEN", "")
+        if raw_token in ["INITIAL_PLACEHOLDER", "placeholder", "None", "null", "undefined"]:
+            raw_token = ""
+        self.token = raw_token
+        
         self.headers = {
             "Accept": "application/vnd.github.v3+json",
             "User-Agent": "Enterprise-Application-Discovery-Agent"
         }
         if self.token:
             self.headers["Authorization"] = f"token {self.token}"
+
 
     @staticmethod
     def parse_url(repo_url: str) -> Tuple[str, str]:
