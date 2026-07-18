@@ -32,7 +32,7 @@ RUN echo 'server { \
     \
     # Proxy API requests to the backend container \
     location /api/ { \
-        proxy_pass http://backend:8000/api/; \
+        proxy_pass http://127.0.0.1:8000/api/; \
         proxy_set_header Host $host; \
         proxy_set_header X-Real-IP $remote_addr; \
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
@@ -41,10 +41,9 @@ RUN echo 'server { \
     \
     # Proxy Output requests to the backend container \
     location /output/ { \
-        proxy_pass http://backend:8000/output/; \
+        proxy_pass http://127.0.0.1:8000/output/; \
         proxy_set_header Host $host; \
         proxy_set_header X-Real-IP $remote_addr; \
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
         proxy_set_header X-Forwarded-Proto $scheme; \
     } \
 }' > /etc/nginx/conf.d/default.conf
