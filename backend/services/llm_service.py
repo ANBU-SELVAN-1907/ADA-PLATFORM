@@ -51,95 +51,61 @@ class LLMService:
         
         # Get active provider from contextvar if not explicitly passed
         provider = active_provider or active_provider_var.get()
-        
-        # Build priority models list dynamically based on active provider
+
+        # Build ordered priority model list:
+        # 1. Active provider first (explicit user choice)
+        # 2. OmniRoute (always available via built-in defaults)
+        # 3. Gemini / OpenAI (if user configured those keys)
+        # 4. AWS Bedrock (final fallback, only on ECS where IAM role grants access)
         self.models: List[str] = []
-        
-        # 1. Prioritize active provider models first
+
+        # ─ TIER 1: User-selected provider ──────────────────────────────
         if provider == "bedrock":
             custom_model = omniroute_model_var.get()
             if custom_model:
                 full_model = f"bedrock/{custom_model}" if not custom_model.startswith("bedrock/") else custom_model
                 self.models.append(full_model)
-            # Add default Bedrock Claude models as fallback
-            default_bedrock = [
-                "bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
-                "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
-                "bedrock/anthropic.claude-3-haiku-20240307-v1:0"
-            ]
-            for m in default_bedrock:
+            for m in ["bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+                       "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
+                       "bedrock/anthropic.claude-3-haiku-20240307-v1:0"]:
                 if m not in self.models:
                     self.models.append(m)
         elif provider == "gemini" and self.gemini_key:
-            self.models.extend(["gemini-3.5-flash", "gemini-2.0-flash"])
+            self.models.extend(["gemini-2.0-flash", "gemini-1.5-flash"])
         elif provider == "openai" and self.openai_key:
             self.models.extend(["gpt-4o-mini", "gpt-4o"])
-        else:
-            # Default to Omniroute
-            if self.api_key:
-                custom_model = omniroute_model_var.get()
-                if custom_model:
-                    self.models.append(custom_model)
-                primary_model = os.getenv("ADA_PRIMARY_MODEL")
-                if primary_model and primary_model not in self.models:
-                    self.models.append(primary_model)
-                default_omni = ["auto/best-free", "openai/best-free", "if/qwen3-coder-plus", "if/deepseek-r1", "glmt/glm-4.7"]
-                for m in default_omni:
-                    if m not in self.models:
-                        self.models.append(m)
+        # For omniroute / no provider / custom endpoint: fall through to TIER 2 below
 
-        # 2. Append remaining configured provider models as fallback options
-        if self.gemini_key and "gemini-3.5-flash" not in self.models:
-            self.models.extend(["gemini-3.5-flash", "gemini-2.0-flash"])
-            
-        if self.openai_key and "gpt-4o-mini" not in self.models:
-            self.models.extend(["gpt-4o-mini", "gpt-4o"])
-            
-        if self.api_key and "auto/best-free" not in self.models:
-            custom_model = omniroute_model_var.get()
-            if custom_model and custom_model not in self.models:
-                self.models.append(custom_model)
-            primary_model = os.getenv("ADA_PRIMARY_MODEL")
-            if primary_model and primary_model not in self.models:
-                self.models.append(primary_model)
-                
-            default_omni = [
-                "auto/best-free",
-                "openai/best-free",
-                "if/qwen3-coder-plus",
-                "if/deepseek-r1",
-                "glmt/glm-4.7"
-            ]
-            for m in default_omni:
+        # ─ TIER 2: OmniRoute (always available — built-in platform defaults) ───
+        if self.api_key and not any(m.startswith("bedrock/") for m in self.models):
+            custom_model = omniroute_model_var.get() or os.getenv("ADA_PRIMARY_MODEL", "auto/best-free")
+            for m in [custom_model, "auto/best-free", "openai/best-free",
+                       "if/qwen3-coder-plus", "if/deepseek-r1", "glmt/glm-4.7"]:
+                if m and m not in self.models:
+                    self.models.append(m)
+
+        # ─ TIER 3: Gemini & OpenAI fallbacks (if keys available) ────────────
+        if self.gemini_key:
+            for m in ["gemini-2.0-flash", "gemini-1.5-flash"]:
                 if m not in self.models:
                     self.models.append(m)
-                    
-        # If absolutely no keys were passed, fallback to standard defaults (local development)
+        if self.openai_key:
+            for m in ["gpt-4o-mini", "gpt-4o"]:
+                if m not in self.models:
+                    self.models.append(m)
+
+        # ─ TIER 4: AWS Bedrock (final fallback, works via IAM role on ECS) ──
+        use_bedrock = os.getenv("ADA_USE_BEDROCK", "false").lower() == "true"
+        if use_bedrock or provider == "bedrock":
+            for m in ["bedrock/anthropic.claude-3-5-sonnet-20241022-v2:0",
+                       "bedrock/anthropic.claude-3-haiku-20240307-v1:0"]:
+                if m not in self.models:
+                    self.models.append(m)
+
+        # ─ Safety net: if somehow models is still empty, add OmniRoute defaults ─
         if not self.models:
-            primary_model = os.getenv("ADA_PRIMARY_MODEL")
-            if primary_model:
-                self.models.append(primary_model)
-                
-            # Add AWS Bedrock Claude if enabled in env
-            self.use_bedrock = os.getenv("ADA_USE_BEDROCK", "false").lower() == "true"
-            if self.use_bedrock:
-                self.models.append("bedrock/anthropic.claude-3-haiku-20240307-v1:0")
-                
-            default_omni = [
-                "auto/best-free",
-                "openai/best-free",
-                "if/qwen3-coder-plus",
-                "if/deepseek-r1",
-                "glmt/glm-4.7"
-            ]
-            for m in default_omni:
-                if m not in self.models:
-                    self.models.append(m)
-        else:
-            # Add AWS Bedrock Claude if enabled in env and no bedrock models are present
-            self.use_bedrock = os.getenv("ADA_USE_BEDROCK", "false").lower() == "true"
-            if self.use_bedrock and not any(m.startswith("bedrock/") for m in self.models):
-                self.models.append("bedrock/anthropic.claude-3-haiku-20240307-v1:0")
+            logger.warning("No models resolved. Inserting OmniRoute safety defaults.")
+            self.models = ["auto/best-free", "openai/best-free", "if/qwen3-coder-plus"]
 
         
         self.dead_models: Dict[str, str] = {}

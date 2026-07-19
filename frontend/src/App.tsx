@@ -34,17 +34,12 @@ export default function App() {
   const handleStartDiscovery = async (url: string) => {
     if (!url.trim()) return
 
-    // Check if any provider is enabled
-    const hasEnabledProvider = Object.values(providers).some((p) => p.enabled)
-    if (!hasEnabledProvider) {
-      setError('No LLM provider is enabled. Please configure at least one provider in Settings.')
-      setPage('processing')
-      return
-    }
-
-    const providerConfig = getActiveProviderConfig()
-    if (!providerConfig) {
-      setError('Active provider is not configured. Please check your provider settings.')
+    // OmniRoute is always available (built-in backend defaults)
+    // Only block if a non-omniroute provider is active and has no key
+    const activeProviderObj = providers[activeProvider as keyof typeof providers]
+    const isOmniRoute = activeProvider === 'omniroute'
+    if (!isOmniRoute && activeProviderObj && !activeProviderObj.apiKey && activeProvider !== 'bedrock') {
+      setError(`${activeProvider} is selected but has no API key. Open Settings (⚙) to add one, or switch to OmniRoute.`)
       setPage('processing')
       return
     }
@@ -63,12 +58,18 @@ export default function App() {
     addLog('Establishing connection to multi-agent discovery orchestration server...')
 
     try {
-      // Resolve the active provider's endpoint and key so the backend always
-      // receives the correct custom URL, regardless of which card is "Active".
+      // Resolve the active provider endpoint and key.
+      // For OmniRoute: the backend has built-in defaults, so send null if nothing was explicitly configured by user.
       const activeProviderConfig = providers[activeProvider as keyof typeof providers]
-      const resolvedEndpoint = (activeProviderConfig as any)?.endpoint || providers.omniroute?.endpoint || null
-      const resolvedKey = (activeProviderConfig as any)?.apiKey || null
-      const resolvedModel = (activeProviderConfig as any)?.customModel || providers.omniroute?.customModel || null
+      const userConfiguredKey = localStorage.getItem(`ada_provider_${activeProvider}_key`) || ''
+      const userConfiguredEndpoint = localStorage.getItem(`ada_provider_${activeProvider}_endpoint`) || ''
+      const userConfiguredModel = localStorage.getItem(`ada_provider_${activeProvider}_customModel`) || ''
+
+      // Only send key/endpoint if user explicitly set them (not just defaults)
+      // This lets the backend always apply its own env-var defaults as authoritative source
+      const resolvedKey = userConfiguredKey || (activeProviderConfig as any)?.apiKey || null
+      const resolvedEndpoint = userConfiguredEndpoint || (activeProviderConfig as any)?.endpoint || null
+      const resolvedModel = userConfiguredModel || (activeProviderConfig as any)?.customModel || null
 
       streamDiscovery({
         repo_url: url.trim(),

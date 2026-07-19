@@ -14,6 +14,13 @@ if env_path.exists():
                 key, val = clean_line.split("=", 1)
                 os.environ.setdefault(key.strip(), val.strip())
 
+# ─── Built-in OmniRoute defaults (used when nothing is configured by user)
+# These are the platform-level credentials embedded in the backend so the app
+# works out-of-the-box for any new user with zero configuration.
+os.environ.setdefault("ADA_OMNIROUTE_BASE_URL",  "http://localhost:20128/v1")
+os.environ.setdefault("ADA_OMNIROUTE_API_KEY",   "sk-d7761e9ee5d99f65-3c7011-66f69f57")
+os.environ.setdefault("ADA_OMNIROUTE_MODEL",      "auto/best-free")
+
 # Map ADA_OMNIROUTE_BASE_URL → ADA_OMNIROUTE_URL (append /chat/completions)
 if "ADA_OMNIROUTE_BASE_URL" in os.environ and "ADA_OMNIROUTE_URL" not in os.environ:
     base_endpoint = os.environ["ADA_OMNIROUTE_BASE_URL"].rstrip("/")
@@ -37,9 +44,9 @@ if "GEMINI_API_KEY" in os.environ and "ADA_GEMINI_KEY" not in os.environ:
 
 
 class Settings:
-    APP_VERSION: str = "1.0.0"
+    APP_VERSION: str = "3.0.0"
     APP_TYPE: str = "Deep Schematic Discovery Engine"
-    VERSION_COUNT: str = "ADA-V2"
+    VERSION_COUNT: str = "ADA-V3"
     OUTPUT_DIR: Path = Path("output")
 
 

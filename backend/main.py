@@ -28,11 +28,22 @@ from services.llm_service import (
     gemini_key_var
 )
 
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("ADA.Main")
+
+
+def _safe_json(obj: object) -> str:
+    """JSON-serialize an object, converting any non-serializable types to strings."""
+    def default(o):
+        if isinstance(o, set):
+            return list(o)
+        return str(o)
+    return json.dumps(obj, default=default)
+
 
 app = FastAPI(
     title="Deloitte AI Insights — Deep Schematic Discovery Engine",
@@ -88,6 +99,7 @@ async def run_discovery(request: Request, payload: DiscoveryRequest):
 
     is_bedrock_active = (payload.active_provider == "bedrock") or (os.getenv("ADA_USE_BEDROCK", "false").lower() == "true")
 
+    # Allow request if: Bedrock is active, OR any key is present (including built-in OmniRoute defaults)
     if not is_bedrock_active and not (omniroute_api_key or openai_api_key or gemini_api_key):
         raise HTTPException(
             status_code=400,
@@ -215,6 +227,7 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
 
     is_bedrock_active = (payload.active_provider == "bedrock") or (os.getenv("ADA_USE_BEDROCK", "false").lower() == "true")
 
+    # Allow request if: Bedrock is active, OR any key is present (including built-in OmniRoute defaults)
     if not is_bedrock_active and not (omniroute_api_key or openai_api_key or gemini_api_key):
         raise HTTPException(
             status_code=400,
@@ -315,12 +328,12 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
                             logs = state_delta.get("execution_logs", [])
                             if not logs:
                                 logs = [f"Agent {step_id.upper()} execution completed successfully."]
-                            event_queue.put(f"event: agent_complete\ndata: {json.dumps({'agentId': step_id, 'logs': logs})}\n\n")
+                            event_queue.put(f"event: agent_complete\ndata: {_safe_json({'agentId': step_id, 'logs': logs})}\n\n")
                             next_node = get_next_node(node_name)
                             if next_node:
                                 next_step_id = NODE_TO_STEP_ID.get(next_node)
                                 if next_step_id:
-                                    event_queue.put(f"event: agent_start\ndata: {json.dumps({'agentId': next_step_id})}\n\n")
+                                    event_queue.put(f"event: agent_start\ndata: {_safe_json({'agentId': next_step_id})}\n\n")
 
                 # Compile the report
                 repo_base = current_state.get("repo_name") or payload.repo_url.split("/")[-1].replace(".git", "")
@@ -363,11 +376,11 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
                     "manifests_fetched": len(current_state.get("high_value_contents", {})),
                     "payload": response_payload
                 }
-                event_queue.put(f"event: complete\ndata: {json.dumps(complete_data)}\n\n")
+                event_queue.put(f"event: complete\ndata: {_safe_json(complete_data)}\n\n")
 
             except Exception as e:
                 logger.exception("Error during streaming discovery pipeline execution.")
-                event_queue.put(f"event: error\ndata: {json.dumps({'detail': str(e)})}\n\n")
+                event_queue.put(f"event: error\ndata: {_safe_json({'detail': str(e)})}\n\n")
             finally:
                 event_queue.put(_SENTINEL)
 
