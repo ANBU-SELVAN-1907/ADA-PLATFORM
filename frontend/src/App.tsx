@@ -63,12 +63,19 @@ export default function App() {
     addLog('Establishing connection to multi-agent discovery orchestration server...')
 
     try {
+      // Resolve the active provider's endpoint and key so the backend always
+      // receives the correct custom URL, regardless of which card is "Active".
+      const activeProviderConfig = providers[activeProvider as keyof typeof providers]
+      const resolvedEndpoint = (activeProviderConfig as any)?.endpoint || providers.omniroute?.endpoint || null
+      const resolvedKey = (activeProviderConfig as any)?.apiKey || null
+      const resolvedModel = (activeProviderConfig as any)?.customModel || providers.omniroute?.customModel || null
+
       streamDiscovery({
         repo_url: url.trim(),
         github_token: githubToken || null,
-        omniroute_key: providers.omniroute?.apiKey || null,
-        omniroute_url: providers.omniroute?.endpoint || null,
-        omniroute_model: providers.omniroute?.customModel || null,
+        omniroute_key: resolvedKey || providers.omniroute?.apiKey || null,
+        omniroute_url: resolvedEndpoint,
+        omniroute_model: resolvedModel,
         gemini_key: providers.gemini?.apiKey || null,
         openai_key: providers.openai?.apiKey || null,
         active_provider: activeProvider,

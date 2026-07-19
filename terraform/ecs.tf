@@ -78,7 +78,8 @@ resource "aws_ecs_task_definition" "app" {
         { name = "ADA_MAX_CONCURRENT_AGENTS", value = "6" },
         { name = "ADA_LLM_TEMPERATURE",       value = "0.2" },
         { name = "AWS_S3_BUCKET",             value = aws_s3_bucket.report_bucket.id },
-        { name = "AWS_REGION",                value = var.aws_region }
+        { name = "AWS_REGION",                value = var.aws_region },
+        { name = "ADA_USE_BEDROCK",           value = "true" }
       ]
       # Backend health check using native python urllib to avoid missing curl package issues in slim images
       healthCheck = {
@@ -169,7 +170,7 @@ resource "aws_s3_bucket_public_access_block" "report_bucket_acl" {
   restrict_public_buckets = true
 }
 
-# ─── ECS Task Role for Container Access (S3 uploads) ──────────────────────────
+# ─── ECS Task Role for Container Access (S3 + Bedrock) ──────────────────────────
 resource "aws_iam_role" "ecs_task_role" {
   name = "${var.app_name}-ecs-task-role"
   assume_role_policy = jsonencode({
@@ -201,7 +202,28 @@ resource "aws_iam_policy" "s3_access" {
   })
 }
 
+resource "aws_iam_policy" "bedrock_access" {
+  name = "${var.app_name}-bedrock-access"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream",
+        "bedrock:ListFoundationModels"
+      ]
+      Resource = ["*"]
+    }]
+  })
+}
+
 resource "aws_iam_role_policy_attachment" "s3_access_attachment" {
   role       = aws_iam_role.ecs_task_role.name
   policy_arn = aws_iam_policy.s3_access.arn
+}
+
+resource "aws_iam_role_policy_attachment" "bedrock_access_attachment" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = aws_iam_policy.bedrock_access.arn
 }

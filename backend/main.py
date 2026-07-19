@@ -83,7 +83,9 @@ async def run_discovery(request: Request, payload: DiscoveryRequest):
     openai_api_key = payload.openai_key or os.getenv("ADA_OPENAI_KEY", os.getenv("OPENAI_API_KEY", ""))
     gemini_api_key = payload.gemini_key or os.getenv("ADA_GEMINI_KEY", os.getenv("GEMINI_API_KEY", ""))
 
-    if not (omniroute_api_key or openai_api_key or gemini_api_key):
+    is_bedrock_active = (payload.active_provider == "bedrock") or (os.getenv("ADA_USE_BEDROCK", "false").lower() == "true")
+
+    if not is_bedrock_active and not (omniroute_api_key or openai_api_key or gemini_api_key):
         raise HTTPException(
             status_code=400,
             detail="Missing required API key. Please provide at least one key for Omniroute, Gemini, or OpenAI."
@@ -208,7 +210,9 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
     openai_api_key = payload.openai_key or os.getenv("ADA_OPENAI_KEY", os.getenv("OPENAI_API_KEY", ""))
     gemini_api_key = payload.gemini_key or os.getenv("ADA_GEMINI_KEY", os.getenv("GEMINI_API_KEY", ""))
 
-    if not (omniroute_api_key or openai_api_key or gemini_api_key):
+    is_bedrock_active = (payload.active_provider == "bedrock") or (os.getenv("ADA_USE_BEDROCK", "false").lower() == "true")
+
+    if not is_bedrock_active and not (omniroute_api_key or openai_api_key or gemini_api_key):
         raise HTTPException(
             status_code=400,
             detail="Missing required API key. Please provide at least one key for Omniroute, Gemini, or OpenAI."

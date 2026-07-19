@@ -114,40 +114,52 @@ function ProviderCard({
             className="border-t border-surface-border/30"
           >
             <div className="p-4 space-y-4">
-              {/* API Key Input */}
-              <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
-                  <Key size={11} />
-                  API Key
-                </label>
-                <div className="relative">
-                  <input
-                    type={showKey ? 'text' : 'password'}
-                    value={apiKey}
-                    onChange={(e) => onKeyChange(e.target.value)}
-                    placeholder={`Enter ${provider.name} API key...`}
-                    className="w-full bg-surface-elevated border border-surface-border rounded-xl px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-discovery focus:ring-2 focus:ring-discovery/20 transition-all pr-10"
-                  />
-                  <button
-                    onClick={() => setShowKey(!showKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
-                  >
-                    {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
-                  </button>
+              {/* Info note for AWS Bedrock native authentication */}
+              {provider.id === 'bedrock' && (
+                <div className="rounded-xl bg-discovery/10 border border-discovery/20 p-3 text-xs text-text-secondary flex items-start gap-2">
+                  <Info size={16} className="text-discovery shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-text-primary">IAM Role Authentication:</span> This provider uses your AWS Fargate container task role. No API key is required when running in your AWS environment.
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Endpoint Input */}
+              {/* API Key Input - Hidden for Bedrock */}
+              {provider.id !== 'bedrock' && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                    <Key size={11} />
+                    API Key
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showKey ? 'text' : 'password'}
+                      value={apiKey}
+                      onChange={(e) => onKeyChange(e.target.value)}
+                      placeholder={`Enter ${provider.name} API key...`}
+                      className="w-full bg-surface-elevated border border-surface-border rounded-xl px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-discovery focus:ring-2 focus:ring-discovery/20 transition-all pr-10"
+                    />
+                    <button
+                      onClick={() => setShowKey(!showKey)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
+                    >
+                      {showKey ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Endpoint Input / Region input for Bedrock */}
               <div className="space-y-1.5">
                 <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
                   <ExternalLink size={11} />
-                  Endpoint URL
+                  {provider.id === 'bedrock' ? 'AWS Region (Optional)' : 'Endpoint URL'}
                 </label>
                 <input
                   type="text"
                   value={endpoint}
                   onChange={(e) => onEndpointChange(e.target.value)}
-                  placeholder={provider.defaultEndpoint || 'https://api.example.com'}
+                  placeholder={provider.id === 'bedrock' ? 'e.g. us-east-1' : (provider.defaultEndpoint || 'https://api.example.com')}
                   className="w-full bg-surface-elevated border border-surface-border rounded-xl px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-discovery focus:ring-2 focus:ring-discovery/20 transition-all"
                 />
               </div>
@@ -162,7 +174,7 @@ function ProviderCard({
                   type="text"
                   value={customModel}
                   onChange={(e) => onModelChange(e.target.value)}
-                  placeholder="e.g. auto/best-free or system.ai.glm-5-2"
+                  placeholder={provider.id === 'bedrock' ? 'e.g. anthropic.claude-3-5-sonnet-20241022-v2:0' : 'e.g. auto/best-free'}
                   className="w-full bg-surface-elevated border border-surface-border rounded-xl px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-discovery focus:ring-2 focus:ring-discovery/20 transition-all"
                 />
               </div>

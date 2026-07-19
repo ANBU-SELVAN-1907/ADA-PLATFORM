@@ -242,4 +242,12 @@ export const LLM_PROVIDERS: LLMProvider[] = [
     color: '#0078D4',
     defaultEndpoint: 'https://{resource}.openai.azure.com'
   },
+  {
+    id: 'bedrock',
+    name: 'AWS Bedrock',
+    description: 'Natively invoke Bedrock model without API keys inside AWS ECS',
+    icon: 'cloud',
+    color: '#FF9900',
+    defaultEndpoint: 'bedrock-runtime'
+  },
 ]
