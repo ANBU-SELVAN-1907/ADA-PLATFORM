@@ -1279,7 +1279,7 @@ class ReportService:
                 logger.info(f"Successfully uploaded to S3. Presigned URL generated.")
                 return presigned_url
                 
-            except ClientError as e:
+            except Exception as e:
                 logger.error(f"Failed to upload report to AWS S3: {e}")
                 # Fallback to local path if upload fails
         

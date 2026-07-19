@@ -49,6 +49,7 @@ resource "aws_ecs_task_definition" "app" {
   cpu                      = 1024
   memory                   = 3072  # Increased: 10 LLM agents need more headroom
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   # Single Task with 2 containers: Frontend (Nginx) + Backend (FastAPI) sidecar
   container_definitions = jsonencode([
@@ -75,7 +76,9 @@ resource "aws_ecs_task_definition" "app" {
         { name = "ADA_LLM_MAX_TOKENS",        value = "8000" },
         { name = "ADA_AGENT_TIMEOUT_SEC",     value = "120" },
         { name = "ADA_MAX_CONCURRENT_AGENTS", value = "6" },
-        { name = "ADA_LLM_TEMPERATURE",       value = "0.2" }
+        { name = "ADA_LLM_TEMPERATURE",       value = "0.2" },
+        { name = "AWS_S3_BUCKET",             value = aws_s3_bucket.report_bucket.id },
+        { name = "AWS_REGION",                value = var.aws_region }
       ]
       # Backend health check using native python urllib to avoid missing curl package issues in slim images
       healthCheck = {
@@ -150,4 +153,55 @@ resource "aws_ecs_service" "app_service" {
   lifecycle {
     ignore_changes = [task_definition]
   }
+}
+
+# ─── Reports S3 Bucket ──────────────────────────────────────────────────────────
+resource "aws_s3_bucket" "report_bucket" {
+  bucket_prefix = "${var.app_name}-reports-"
+  force_destroy = true
+}
+
+resource "aws_s3_bucket_public_access_block" "report_bucket_acl" {
+  bucket                  = aws_s3_bucket.report_bucket.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# ─── ECS Task Role for Container Access (S3 uploads) ──────────────────────────
+resource "aws_iam_role" "ecs_task_role" {
+  name = "${var.app_name}-ecs-task-role"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
+    }]
+  })
+}
+
+resource "aws_iam_policy" "s3_access" {
+  name = "${var.app_name}-s3-access"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "s3:PutObject",
+        "s3:GetObject",
+        "s3:ListBucket"
+      ]
+      Resource = [
+        aws_s3_bucket.report_bucket.arn,
+        "${aws_s3_bucket.report_bucket.arn}/*"
+      ]
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "s3_access_attachment" {
+  role       = aws_iam_role.ecs_task_role.name
+  policy_arn = aws_iam_policy.s3_access.arn
 }
