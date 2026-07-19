@@ -112,7 +112,7 @@ resource "aws_ecs_task_definition" "app" {
 
 resource "aws_security_group" "ecs_sg" {
   name        = "${var.app_name}-ecs-sg"
-  description = "Allow inbound from ALB on port 80"
+  description = "Allow inbound from ALB only"
   vpc_id      = aws_vpc.main.id
 
   ingress {
