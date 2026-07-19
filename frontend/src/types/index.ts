@@ -2,6 +2,7 @@ export interface DiscoveryRequest {
   repo_url: string
   github_token?: string | null
   omniroute_key?: string | null
+  omniroute_url?: string | null
   gemini_key?: string | null
   openai_key?: string | null
   active_provider?: string | null

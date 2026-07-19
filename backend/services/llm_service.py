@@ -13,6 +13,7 @@ logger = logging.getLogger("ADA.LLMService")
 
 # Thread/async-safe context variable to propagate the active provider from request context
 active_provider_var = contextvars.ContextVar("active_provider", default=None)
+omniroute_url_var = contextvars.ContextVar("omniroute_url", default=None)
 
 class ErrorCategory(Enum):
     RATE_LIMIT = "429_RATE_LIMIT"
@@ -30,7 +31,16 @@ class LLMService:
         gemini_key: Optional[str] = None,
         active_provider: Optional[str] = None
     ):
-        self.api_url = api_url or os.getenv("ADA_OMNIROUTE_URL", "https://api.omniroute.ai/v1/chat/completions")
+        custom_url = api_url or omniroute_url_var.get()
+        if custom_url:
+            clean_url = custom_url.rstrip("/")
+            if not clean_url.endswith("/chat/completions"):
+                self.api_url = f"{clean_url}/chat/completions"
+            else:
+                self.api_url = clean_url
+        else:
+            self.api_url = os.getenv("ADA_OMNIROUTE_URL", "https://api.omniroute.ai/v1/chat/completions")
+            
         self.api_key = api_key or os.getenv("ADA_OMNIROUTE_KEY", "")
         self.openai_key = openai_key or os.getenv("ADA_OPENAI_KEY", os.getenv("OPENAI_API_KEY", ""))
         self.gemini_key = gemini_key or os.getenv("ADA_GEMINI_KEY", os.getenv("GEMINI_API_KEY", ""))
