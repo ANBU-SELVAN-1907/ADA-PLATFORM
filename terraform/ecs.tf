@@ -150,10 +150,7 @@ resource "aws_ecs_service" "app_service" {
     container_port   = 80
   }
 
-  # Avoid service re-deployment just because task definition changed during Terraform apply
-  lifecycle {
-    ignore_changes = [task_definition]
-  }
+
 }
 
 # ─── Reports S3 Bucket ──────────────────────────────────────────────────────────
