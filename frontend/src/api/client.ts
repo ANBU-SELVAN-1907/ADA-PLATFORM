@@ -61,6 +61,7 @@ export function streamDiscovery(
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
+      let completedSuccessfully = false
 
       while (true) {
         const { value, done } = await reader.read()
@@ -73,7 +74,8 @@ export function streamDiscovery(
         let currentEvent = ''
         for (const line of lines) {
           const trimmed = line.trim()
-          if (!trimmed) continue
+          // SSE heartbeat comment lines (start with ':')
+          if (!trimmed || trimmed.startsWith(':')) continue
 
           if (trimmed.startsWith('event:')) {
             currentEvent = trimmed.substring(6).trim()
@@ -86,8 +88,10 @@ export function streamDiscovery(
               } else if (currentEvent === 'agent_complete') {
                 callbacks.onAgentComplete?.(data.agentId, data.logs)
               } else if (currentEvent === 'complete') {
+                completedSuccessfully = true
                 callbacks.onComplete?.(data)
               } else if (currentEvent === 'error') {
+                completedSuccessfully = true // error event is a valid terminal state
                 callbacks.onError?.(new Error(data.detail || 'Streaming error'))
               }
             } catch (e) {
@@ -95,6 +99,15 @@ export function streamDiscovery(
             }
           }
         }
+      }
+
+      // If stream ended without a complete or error event, the connection was dropped
+      if (!completedSuccessfully) {
+        callbacks.onError?.(
+          new Error(
+            'The analysis stream was interrupted. The server may have timed out or restarted. Please try again.'
+          )
+        )
       }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
