@@ -3,6 +3,9 @@ from pathlib import Path
 
 # Parse the local .env file (local dev only — in production env vars come from ECS task definition)
 env_path = Path(".env")
+if not env_path.exists() and Path("../.env").exists():
+    env_path = Path("../.env")
+
 if env_path.exists():
     with open(env_path, "r", encoding="utf-8") as f:
         for line in f:
