@@ -15,6 +15,9 @@ logger = logging.getLogger("ADA.LLMService")
 active_provider_var = contextvars.ContextVar("active_provider", default=None)
 omniroute_url_var = contextvars.ContextVar("omniroute_url", default=None)
 omniroute_model_var = contextvars.ContextVar("omniroute_model", default=None)
+omniroute_key_var = contextvars.ContextVar("omniroute_key", default=None)
+openai_key_var = contextvars.ContextVar("openai_key", default=None)
+gemini_key_var = contextvars.ContextVar("gemini_key", default=None)
 
 class ErrorCategory(Enum):
     RATE_LIMIT = "429_RATE_LIMIT"
@@ -42,9 +45,9 @@ class LLMService:
         else:
             self.api_url = os.getenv("ADA_OMNIROUTE_URL", "https://api.omniroute.ai/v1/chat/completions")
             
-        self.api_key = api_key or os.getenv("ADA_OMNIROUTE_KEY", "")
-        self.openai_key = openai_key or os.getenv("ADA_OPENAI_KEY", os.getenv("OPENAI_API_KEY", ""))
-        self.gemini_key = gemini_key or os.getenv("ADA_GEMINI_KEY", os.getenv("GEMINI_API_KEY", ""))
+        self.api_key = api_key or omniroute_key_var.get() or os.getenv("ADA_OMNIROUTE_KEY", "")
+        self.openai_key = openai_key or openai_key_var.get() or os.getenv("ADA_OPENAI_KEY", os.getenv("OPENAI_API_KEY", ""))
+        self.gemini_key = gemini_key or gemini_key_var.get() or os.getenv("ADA_GEMINI_KEY", os.getenv("GEMINI_API_KEY", ""))
         
         # Get active provider from contextvar if not explicitly passed
         provider = active_provider or active_provider_var.get()

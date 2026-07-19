@@ -16,7 +16,14 @@ import json
 from config import settings
 from agents.orchestration import construct_discovery_graph
 from services.report_service import ReportService
-from services.llm_service import active_provider_var, omniroute_url_var, omniroute_model_var
+from services.llm_service import (
+    active_provider_var, 
+    omniroute_url_var, 
+    omniroute_model_var,
+    omniroute_key_var,
+    openai_key_var,
+    gemini_key_var
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -124,12 +131,18 @@ async def run_discovery(request: Request, payload: DiscoveryRequest):
         token = active_provider_var.set(payload.active_provider)
         url_token = omniroute_url_var.set(payload.omniroute_url)
         model_token = omniroute_model_var.set(payload.omniroute_model)
+        key_token = omniroute_key_var.set(payload.omniroute_key)
+        openai_token = openai_key_var.set(payload.openai_key)
+        gemini_token = gemini_key_var.set(payload.gemini_key)
         try:
             final_state = compiled_graph.invoke(initial_state)
         finally:
             active_provider_var.reset(token)
             omniroute_url_var.reset(url_token)
             omniroute_model_var.reset(model_token)
+            omniroute_key_var.reset(key_token)
+            openai_key_var.reset(openai_token)
+            gemini_key_var.reset(gemini_token)
 
         # Propagate repo_url into final state for the report service
         final_state["repo_url"] = payload.repo_url
@@ -233,6 +246,9 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
         token = active_provider_var.set(payload.active_provider)
         url_token = omniroute_url_var.set(payload.omniroute_url)
         model_token = omniroute_model_var.set(payload.omniroute_model)
+        key_token = omniroute_key_var.set(payload.omniroute_key)
+        openai_token = openai_key_var.set(payload.openai_key)
+        gemini_token = gemini_key_var.set(payload.gemini_key)
         try:
             # Yield the starting of the first step
             yield f"event: agent_start\ndata: {json.dumps({'agentId': 'repo'})}\n\n"
@@ -350,6 +366,9 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
             active_provider_var.reset(token)
             omniroute_url_var.reset(url_token)
             omniroute_model_var.reset(model_token)
+            omniroute_key_var.reset(key_token)
+            openai_key_var.reset(openai_token)
+            gemini_key_var.reset(gemini_token)
 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")
 
