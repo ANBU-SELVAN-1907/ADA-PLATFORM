@@ -204,15 +204,19 @@ def run_telemetry_agent(state: DiscoveryState) -> dict:
     }
 
     result = {
-        "telemetry_summary": "",
-        "logging": {"frameworks": existing_logging, "assessment": existing_obs},
-        "metrics": {"tools": [], "assessment": "Not implemented."},
-        "tracing": {"tools": [], "assessment": "Not implemented."},
-        "health_checks": {"endpoints": [], "assessment": "Not implemented."},
-        "error_tracking": {"tools": [], "assessment": "Not implemented."},
+        "telemetry_summary": "Telemetry analysis requires a valid LLM API key. Configure OpenAI or Gemini in the settings panel.",
+        "logging": {"frameworks": existing_logging, "log_levels": [], "structured": False, "destinations": ["stdout"], "assessment": existing_obs or "No LLM analysis available."},
+        "metrics": {"tools": [], "endpoints": [], "assessment": "Not implemented — add Prometheus or Datadog."},
+        "tracing": {"tools": [], "assessment": "Not implemented — add OpenTelemetry."},
+        "health_checks": {"endpoints": [], "assessment": "Not detected — add /health and /ready endpoints."},
+        "error_tracking": {"tools": [], "assessment": "Not detected — add Sentry or Rollbar."},
         "performance": {"caching": "Not detected.", "rate_limiting": "Not detected.", "timeouts": "Not detected."},
-        "observability_score": "Analysis pending.",
-        "recommendations": []
+        "observability_score": "",
+        "recommendations": [
+            "Configure a valid LLM API key (OpenAI or Gemini) to enable full telemetry analysis.",
+            "Add structured logging with correlation IDs.",
+            "Implement /health and /ready endpoints for service probes.",
+        ]
     }
 
     try:

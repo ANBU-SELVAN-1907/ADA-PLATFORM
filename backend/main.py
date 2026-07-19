@@ -35,11 +35,20 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
-# CORS middleware for secure cross-origin resource sharing
+# Support comma-separated list of allowed origins, or wildcard
+_raw_origins = [o.strip() for o in FRONTEND_URL.split(",") if o.strip()]
+if "*" in _raw_origins or not _raw_origins:
+    ALLOWED_ORIGINS = ["*"]
+    ALLOW_CREDENTIALS = False  # Credentials CANNOT be used with wildcard origin
+else:
+    ALLOWED_ORIGINS = _raw_origins
+    ALLOW_CREDENTIALS = True
+
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONTEND_URL],  # Restrict to frontend origin
-    allow_credentials=True,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=ALLOW_CREDENTIALS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -64,7 +73,7 @@ class DiscoveryRequest(BaseModel):
 
 
 @app.post("/api/v1/discover")
-@limiter.limit("5/minute")
+@limiter.limit("20/minute")
 async def run_discovery(request: Request, payload: DiscoveryRequest):
     logger.info(f"Discovery request received: {payload.repo_url} [{payload.format.upper()}]")
 
@@ -174,7 +183,7 @@ async def run_discovery(request: Request, payload: DiscoveryRequest):
 
 
 @app.post("/api/v1/discover/stream")
-@limiter.limit("5/minute")
+@limiter.limit("20/minute")
 async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
     logger.info(f"Discovery stream request received: {payload.repo_url} [{payload.format.upper()}]")
 

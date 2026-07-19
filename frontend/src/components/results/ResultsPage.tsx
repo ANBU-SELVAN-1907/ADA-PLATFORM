@@ -270,6 +270,21 @@ function SecurityTab({ payload }: { payload: any }) {
           ))}
         </div>
       </SectionCard>
+
+      {security.observability_posture && (
+        <SectionCard title="Observability Posture" icon={<Activity size={16} className="text-telemetry" />} accent="telemetry">
+          <p className="text-sm text-text-secondary leading-relaxed">{security.observability_posture}</p>
+          {security.logging_frameworks && security.logging_frameworks.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {security.logging_frameworks.map((fw: string, i: number) => (
+                <span key={i} className="px-2.5 py-1 rounded-lg bg-telemetry/10 border border-telemetry/20 text-[11px] text-telemetry font-medium">
+                  {fw}
+                </span>
+              ))}
+            </div>
+          )}
+        </SectionCard>
+      )}
     </div>
   )
 }
@@ -373,12 +388,39 @@ function InfrastructureTab({ payload }: { payload: any }) {
   )
 }
 
+// ─── Telemetry Sub-card ────────────────────────────────────────────────────────
+function TelemetrySubCard({ title, icon, items, assessment, color = 'text-telemetry' }: {
+  title: string
+  icon: React.ReactNode
+  items?: string[]
+  assessment?: string
+  color?: string
+}) {
+  return (
+    <div className="p-3 rounded-xl bg-surface-elevated/30 border border-surface-border/30">
+      <div className="flex items-center gap-2 mb-2">
+        <span className={color}>{icon}</span>
+        <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">{title}</span>
+      </div>
+      {items && items.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {items.map((item: string, i: number) => (
+            <span key={i} className="px-2 py-0.5 rounded-md bg-surface-elevated border border-surface-border/50 text-[10px] text-text-secondary font-mono">
+              {item}
+            </span>
+          ))}
+        </div>
+      )}
+      {assessment && <p className="text-xs text-text-secondary leading-relaxed">{assessment}</p>}
+    </div>
+  )
+}
+
 // ─── Telemetry Tab ────────────────────────────────────────────────────────────
 function TelemetryTab({ payload }: { payload: any }) {
   const telemetry = payload?.telemetry_analysis
   if (!telemetry) return null
 
-  // Try to match a score like "8/10", "8", or "8.5" at the start or anywhere in the string
   const rawScore = String(telemetry.observability_score || '')
   const scoreMatch = rawScore.match(/\b([0-9]+(\.[0-9]+)?(\s*\/\s*10)?)\b/)
   let scoreDisplay = '—'
@@ -388,34 +430,31 @@ function TelemetryTab({ payload }: { payload: any }) {
     scoreDisplay = scoreMatch[0]
     if (!scoreDisplay.includes('/10')) {
       const parsedVal = parseFloat(scoreDisplay)
-      if (!isNaN(parsedVal) && parsedVal <= 10) {
-        scoreDisplay = `${scoreDisplay}/10`
-      }
+      if (!isNaN(parsedVal) && parsedVal <= 10) scoreDisplay = `${scoreDisplay}/10`
     }
-    // Clean up details text by removing matched score from front if present
     const prefixStr = scoreMatch[0]
     if (rawScore.trim().startsWith(prefixStr)) {
       scoreDetails = rawScore.trim().substring(prefixStr.length).replace(/^[.\s,-]+/, '').trim()
     }
   } else {
-    if (rawScore.length <= 8) {
-      scoreDisplay = rawScore
-      scoreDetails = ''
-    } else {
-      scoreDisplay = 'N/A'
-      scoreDetails = rawScore
-    }
+    scoreDisplay = rawScore.length <= 8 ? rawScore : 'N/A'
+    scoreDetails = rawScore.length <= 8 ? '' : rawScore
   }
 
+  const logging     = telemetry.logging     || {}
+  const metrics     = telemetry.metrics     || {}
+  const tracing     = telemetry.tracing     || {}
+  const healthChecks = telemetry.health_checks || {}
+  const errorTracking = telemetry.error_tracking || {}
+  const performance = telemetry.performance  || {}
 
   return (
     <div className="space-y-6">
       <SectionCard title="Telemetry & Observability" icon={<Activity size={16} className="text-telemetry" />} accent="telemetry">
-        
-        {/* Main Score Details Card */}
+
+        {/* Score Card */}
         <div className="flex flex-col md:flex-row gap-6 p-5 rounded-2xl bg-surface-elevated/40 border border-surface-border mb-6">
-          {/* Large Score Indicator */}
-          <div className="flex flex-col items-center justify-center shrink-0 w-24 h-24 rounded-2xl bg-amber-500/5 border border-amber-500/15 shadow-[0_0_20px_rgba(245,158,11,0.03)] px-2">
+          <div className="flex flex-col items-center justify-center shrink-0 w-24 h-24 rounded-2xl bg-amber-500/5 border border-amber-500/15 px-2">
             <span className={`font-extrabold text-telemetry tracking-tight text-center truncate max-w-full leading-none ${
               scoreDisplay.length > 5 ? 'text-sm' : scoreDisplay.length > 3 ? 'text-lg' : 'text-2xl'
             }`}>
@@ -423,26 +462,59 @@ function TelemetryTab({ payload }: { payload: any }) {
             </span>
             <span className="text-[8px] text-telemetry/80 font-bold uppercase tracking-widest mt-1.5">Score</span>
           </div>
-
-          
-          {/* Explanation & Summary */}
           <div className="flex-1 flex flex-col justify-center gap-2 min-w-0">
             <div className="flex items-center gap-2">
               <Activity size={13} className="text-telemetry" />
               <span className="text-[10px] font-bold text-text-primary uppercase tracking-wider">Observability Posture</span>
             </div>
-            {scoreDetails && (
-              <p className="text-sm text-text-primary leading-relaxed font-semibold">
-                {scoreDetails}
-              </p>
-            )}
-            <p className="text-xs text-text-secondary leading-relaxed">
-              {telemetry.telemetry_summary}
-            </p>
+            {scoreDetails && <p className="text-sm text-text-primary leading-relaxed font-semibold">{scoreDetails}</p>}
+            {telemetry.telemetry_summary && <p className="text-xs text-text-secondary leading-relaxed">{telemetry.telemetry_summary}</p>}
           </div>
         </div>
 
-        {/* Recommendations list */}
+        {/* Signal Breakdown Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <TelemetrySubCard
+            title="Logging"
+            icon={<Activity size={12} />}
+            items={logging.frameworks || logging.log_levels || []}
+            assessment={logging.assessment}
+          />
+          <TelemetrySubCard
+            title="Metrics"
+            icon={<ChevronRight size={12} />}
+            items={metrics.tools || metrics.endpoints || []}
+            assessment={metrics.assessment}
+          />
+          <TelemetrySubCard
+            title="Tracing"
+            icon={<Network size={12} />}
+            items={tracing.tools || []}
+            assessment={tracing.assessment}
+          />
+          <TelemetrySubCard
+            title="Health Checks"
+            icon={<CheckCircle2 size={12} />}
+            items={healthChecks.endpoints || []}
+            assessment={healthChecks.assessment}
+          />
+          <TelemetrySubCard
+            title="Error Tracking"
+            icon={<AlertTriangle size={12} />}
+            items={errorTracking.tools || []}
+            assessment={errorTracking.assessment}
+          />
+          {(performance.caching || performance.rate_limiting || performance.timeouts) && (
+            <div className="p-3 rounded-xl bg-surface-elevated/30 border border-surface-border/30">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-text-muted mb-2">Performance</p>
+              {performance.caching && <p className="text-[11px] text-text-secondary mb-1"><span className="font-semibold text-text-primary">Cache:</span> {performance.caching}</p>}
+              {performance.rate_limiting && <p className="text-[11px] text-text-secondary mb-1"><span className="font-semibold text-text-primary">Rate Limit:</span> {performance.rate_limiting}</p>}
+              {performance.timeouts && <p className="text-[11px] text-text-secondary"><span className="font-semibold text-text-primary">Timeouts:</span> {performance.timeouts}</p>}
+            </div>
+          )}
+        </div>
+
+        {/* Recommendations */}
         {telemetry.recommendations && telemetry.recommendations.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-text-muted uppercase tracking-wider mb-2.5">Recommendations</h4>
@@ -470,28 +542,118 @@ function DocumentationTab({ payload }: { payload: any }) {
   const docs = payload?.doc_analysis
   if (!docs) return null
 
+  const qualityColors: Record<string, string> = {
+    EXCELLENT: 'bg-discovery/10 text-discovery border-discovery/30',
+    GOOD:      'bg-green-500/10 text-green-400 border-green-500/30',
+    MODERATE:  'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
+    MINIMAL:   'bg-orange-500/10 text-orange-400 border-orange-500/30',
+    POOR:      'bg-red-500/10 text-red-400 border-red-500/30',
+  }
+  const qualityKey = Object.keys(qualityColors).find(k =>
+    docs.documentation_quality?.toUpperCase().includes(k)
+  ) || 'MINIMAL'
+
   return (
     <div className="space-y-6">
       <SectionCard title="Documentation" icon={<BookOpen size={16} className="text-reports" />} accent="reports">
-        <p className="text-sm text-text-secondary mb-4">{docs.doc_summary}</p>
 
-        <div className="p-3 rounded-xl bg-surface-elevated/30 border border-surface-border/30">
-          <p className="text-[10px] text-text-muted uppercase tracking-wider mb-2">Setup Instructions</p>
-          <div className="space-y-1 font-mono text-xs">
-            {docs.setup_instructions?.map((step: string, i: number) => (
-              <motion.div
-                key={i}
-                className="flex items-center gap-2 text-text-secondary"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: i * 0.03 }}
-              >
-                <span className="text-discovery">$</span>
-                <span>{step}</span>
-              </motion.div>
-            ))}
-          </div>
+        {/* Summary + Quality Badge */}
+        <div className="flex items-start gap-3 mb-4">
+          <p className="flex-1 text-sm text-text-secondary leading-relaxed">{docs.doc_summary}</p>
+          {docs.documentation_quality && (
+            <span className={`shrink-0 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${qualityColors[qualityKey]}`}>
+              {qualityKey}
+            </span>
+          )}
         </div>
+
+        {/* Setup Instructions */}
+        {docs.setup_instructions && docs.setup_instructions.length > 0 && (
+          <div className="p-3 rounded-xl bg-surface-elevated/30 border border-surface-border/30 mb-4">
+            <p className="text-[10px] text-text-muted uppercase tracking-wider mb-2">Setup Instructions</p>
+            <div className="space-y-1 font-mono text-xs">
+              {docs.setup_instructions.map((step: string, i: number) => (
+                <motion.div key={i} className="flex items-center gap-2 text-text-secondary"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
+                  <span className="text-discovery">$</span>
+                  <span>{step}</span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Key Features */}
+        {docs.key_features && docs.key_features.length > 0 && (
+          <div className="mb-4">
+            <p className="text-[10px] text-text-muted uppercase tracking-wider mb-2">Key Features</p>
+            <div className="flex flex-wrap gap-2">
+              {docs.key_features.map((f: string, i: number) => (
+                <span key={i} className="px-2.5 py-1 rounded-lg bg-surface-elevated border border-surface-border/50 text-[11px] text-text-secondary">
+                  {f}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* API Documentation Table */}
+        {docs.api_documentation && docs.api_documentation.length > 0 && (
+          <div className="mb-4">
+            <p className="text-[10px] text-text-muted uppercase tracking-wider mb-2">API Endpoints</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-surface-border/50">
+                    <th className="text-left py-2 px-3 text-[10px] text-text-muted uppercase tracking-wider font-semibold">Method</th>
+                    <th className="text-left py-2 px-3 text-[10px] text-text-muted uppercase tracking-wider font-semibold">Endpoint</th>
+                    <th className="text-left py-2 px-3 text-[10px] text-text-muted uppercase tracking-wider font-semibold">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {docs.api_documentation.map((api: any, i: number) => (
+                    <motion.tr key={i}
+                      className="border-b border-surface-border/20 hover:bg-surface-elevated/30 transition-colors"
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
+                      <td className="py-2 px-3">
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase font-mono ${
+                          api.method === 'GET' ? 'bg-discovery/10 text-discovery' :
+                          api.method === 'POST' ? 'bg-knowledge/10 text-knowledge' :
+                          api.method === 'PUT' ? 'bg-yellow-500/10 text-yellow-400' :
+                          'bg-red-500/10 text-red-400'
+                        }`}>{api.method}</span>
+                      </td>
+                      <td className="py-2 px-3 font-mono text-xs text-text-primary">{api.endpoint}</td>
+                      <td className="py-2 px-3 text-xs text-text-secondary">{api.description}</td>
+                    </motion.tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Configuration Requirements */}
+        {docs.configuration_requirements && docs.configuration_requirements.length > 0 && (
+          <div>
+            <p className="text-[10px] text-text-muted uppercase tracking-wider mb-2">Configuration Requirements</p>
+            <div className="space-y-2">
+              {docs.configuration_requirements.map((cfg: any, i: number) => (
+                <motion.div key={i}
+                  className="flex items-start gap-3 p-2.5 rounded-xl bg-surface-elevated/20 border border-surface-border/30"
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.03 }}>
+                  <span className={`shrink-0 mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${
+                    cfg.required ? 'bg-red-500/10 text-red-400' : 'bg-surface-elevated text-text-muted'
+                  }`}>{cfg.required ? 'REQ' : 'OPT'}</span>
+                  <div>
+                    <p className="text-xs font-mono text-text-primary">{cfg.key}</p>
+                    <p className="text-[11px] text-text-muted">{cfg.description}</p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
       </SectionCard>
     </div>
   )

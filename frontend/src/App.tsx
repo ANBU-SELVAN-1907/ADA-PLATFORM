@@ -20,7 +20,6 @@ export default function App() {
     agentSteps,
     advanceStep,
     completeAllSteps,
-    getActiveProviderConfig,
     providers,
     startStep,
     completeStep,
@@ -33,17 +32,17 @@ export default function App() {
   const handleStartDiscovery = async (url: string) => {
     if (!url.trim()) return
 
-    // Check if any provider is enabled
-    const hasEnabledProvider = Object.values(providers).some((p) => p.enabled)
-    if (!hasEnabledProvider) {
-      setError('No LLM provider is enabled. Please configure at least one provider in Settings.')
-      setPage('processing')
-      return
-    }
+    // Collect all non-empty API keys from all providers (regardless of enabled state)
+    // The backend LLMService will pick the right one based on which keys are present
+    const omnirouteKey = providers.omniroute?.apiKey?.trim() || null
+    const geminiKey = providers.gemini?.apiKey?.trim() || null
+    const openaiKey = providers.openai?.apiKey?.trim() || null
 
-    const providerConfig = getActiveProviderConfig()
-    if (!providerConfig) {
-      setError('Active provider is not configured. Please check your provider settings.')
+    // Block only if truly no key is provided anywhere
+    if (!omnirouteKey && !geminiKey && !openaiKey) {
+      setError(
+        'No API key configured. Open Settings (⚙) and add your OpenAI or Gemini API key, then try again.'
+      )
       setPage('processing')
       return
     }
@@ -55,7 +54,7 @@ export default function App() {
 
     // Read locally stored credentials
     const githubToken = localStorage.getItem('ada_github_token') || ''
-    
+
     // Clear logs and print startup status
     clearLogs()
     addLog(`Initiating codebase analysis for ${url.trim()}...`)
@@ -65,9 +64,9 @@ export default function App() {
       streamDiscovery({
         repo_url: url.trim(),
         github_token: githubToken || null,
-        omniroute_key: providers.omniroute?.apiKey || null,
-        gemini_key: providers.gemini?.apiKey || null,
-        openai_key: providers.openai?.apiKey || null,
+        omniroute_key: omnirouteKey,
+        gemini_key: geminiKey,
+        openai_key: openaiKey,
         format: 'docx',
       }, {
         onAgentStart: (agentId) => {
