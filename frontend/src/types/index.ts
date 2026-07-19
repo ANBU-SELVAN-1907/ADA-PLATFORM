@@ -4,6 +4,7 @@ export interface DiscoveryRequest {
   omniroute_key?: string | null
   gemini_key?: string | null
   openai_key?: string | null
+  active_provider?: string | null
   format: 'docx' | 'pdf'
 }
 

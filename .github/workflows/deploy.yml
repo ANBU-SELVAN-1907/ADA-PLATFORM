@@ -12,6 +12,7 @@ env:
   ECS_SERVICE: application-discovery-agent-service
   ECS_CLUSTER: application-discovery-agent-cluster
 
+
 jobs:
   deploy:
     name: Build, Provision & Deploy
@@ -37,30 +38,22 @@ jobs:
 
     - name: Ensure ECR Repositories Exist
       run: |
-        aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY_BACKEND }} 2>/dev/null \
-          || aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY_BACKEND }} --image-scanning-configuration scanOnPush=true
-        aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY_FRONTEND }} 2>/dev/null \
-          || aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY_FRONTEND }} --image-scanning-configuration scanOnPush=true
+        aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY_BACKEND }} 2>/dev/null || aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY_BACKEND }}
+        aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY_FRONTEND }} 2>/dev/null || aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY_FRONTEND }}
 
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Build, Tag & Push Backend Image
+    - name: Build, Tag, and Push Backend Image to Amazon ECR
       run: |
-        docker build \
-          -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_BACKEND }}:${{ github.sha }} \
-          -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_BACKEND }}:latest \
-          ./backend
+        docker build -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_BACKEND }}:${{ github.sha }} -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_BACKEND }}:latest ./backend
         docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_BACKEND }}:${{ github.sha }}
         docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_BACKEND }}:latest
 
-    - name: Build, Tag & Push Frontend Image
+    - name: Build, Tag, and Push Frontend Image to Amazon ECR
       run: |
-        docker build \
-          -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_FRONTEND }}:${{ github.sha }} \
-          -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_FRONTEND }}:latest \
-          ./frontend
+        docker build -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_FRONTEND }}:${{ github.sha }} -t ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_FRONTEND }}:latest ./frontend
         docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_FRONTEND }}:${{ github.sha }}
         docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY_FRONTEND }}:latest
 
@@ -70,20 +63,12 @@ jobs:
     - name: Ensure S3 Bucket for Terraform State Exists
       run: |
         BUCKET_NAME="ada-tf-state-${{ steps.get-account.outputs.account_id }}"
+        # Check if bucket exists, if not create it
         if aws s3api head-bucket --bucket "$BUCKET_NAME" 2>/dev/null; then
           echo "S3 state bucket $BUCKET_NAME already exists."
         else
           echo "Creating S3 state bucket $BUCKET_NAME..."
-          # us-east-1 does NOT accept --create-bucket-configuration; other regions do
-          if [ "${{ env.AWS_REGION }}" = "us-east-1" ]; then
-            aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ env.AWS_REGION }}
-          else
-            aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ env.AWS_REGION }} \
-              --create-bucket-configuration LocationConstraint=${{ env.AWS_REGION }}
-          fi
-          # Enable versioning for state recovery
-          aws s3api put-bucket-versioning --bucket "$BUCKET_NAME" \
-            --versioning-configuration Status=Enabled
+          aws s3api create-bucket --bucket "$BUCKET_NAME" --region ${{ env.AWS_REGION }}
         fi
 
     - name: Terraform Init

@@ -20,3 +20,4 @@ resource "aws_secretsmanager_secret_version" "api_keys_initial" {
     ignore_changes = [secret_string]
   }
 }
+

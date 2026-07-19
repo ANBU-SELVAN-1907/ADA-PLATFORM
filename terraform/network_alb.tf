@@ -97,6 +97,15 @@ resource "aws_security_group" "alb_sg" {
   }
 }
 
+resource "aws_lb" "main" {
+  name               = "${var.app_name}-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb_sg.id]
+  subnets            = [aws_subnet.public_1.id, aws_subnet.public_2.id]
+  # Extended idle timeout for long-running SSE streaming discovery requests
+  idle_timeout       = 620
+}
 
 resource "aws_lb_target_group" "frontend" {
   name        = "${var.app_name}-tg"
@@ -104,7 +113,7 @@ resource "aws_lb_target_group" "frontend" {
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
-
+  
   health_check {
     path                = "/health"   # Served by Nginx — fast and reliable
     matcher             = "200"
@@ -126,19 +135,8 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-resource "aws_lb" "main" {
-  name               = "${var.app_name}-alb"
-  internal           = false
-  load_balancer_type = "application"
-  security_groups    = [aws_security_group.alb_sg.id]
-  subnets            = [aws_subnet.public_1.id, aws_subnet.public_2.id]
-  # Extended idle timeout for long-running SSE streaming discovery requests
-  idle_timeout       = 620
-}
-
 output "application_url" {
   description = "The public URL of your deployed application"
   value       = "http://${aws_lb.main.dns_name}"
 }
-
 

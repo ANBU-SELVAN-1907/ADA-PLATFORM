@@ -1,10 +1,5 @@
 resource "aws_ecs_cluster" "main" {
   name = "${var.app_name}-cluster"
-
-  setting {
-    name  = "containerInsights"
-    value = "enabled"
-  }
 }
 
 resource "aws_cloudwatch_log_group" "ecs_logs" {
@@ -17,8 +12,8 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
       Principal = { Service = "ecs-tasks.amazonaws.com" }
     }]
   })
@@ -29,14 +24,14 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Permission to read ALL secrets for this app from Secrets Manager
+# Attach permission to read secrets from AWS Secrets Manager
 resource "aws_iam_policy" "secrets_access" {
   name = "${var.app_name}-secrets-access"
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Effect   = "Allow"
-      Action   = ["secretsmanager:GetSecretValue"]
+      Effect = "Allow"
+      Action = ["secretsmanager:GetSecretValue"]
       Resource = aws_secretsmanager_secret.api_keys.arn
     }]
   })
@@ -70,7 +65,6 @@ resource "aws_ecs_task_definition" "app" {
           "awslogs-stream-prefix" = "backend"
         }
       }
-      # Secrets injected from AWS Secrets Manager at container start
       secrets = [
         { name = "ADA_OMNIROUTE_API_KEY", valueFrom = "${aws_secretsmanager_secret.api_keys.arn}:omniroute::" },
         { name = "ADA_GITHUB_TOKEN",      valueFrom = "${aws_secretsmanager_secret.api_keys.arn}:github::" }
@@ -83,9 +77,9 @@ resource "aws_ecs_task_definition" "app" {
         { name = "ADA_MAX_CONCURRENT_AGENTS", value = "6" },
         { name = "ADA_LLM_TEMPERATURE",       value = "0.2" }
       ]
-      # Backend health check — ensures it's ready before frontend starts proxying
+      # Backend health check using native python urllib to avoid missing curl package issues in slim images
       healthCheck = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+        command     = ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')\" || exit 1"]
         interval    = 30
         timeout     = 10
         retries     = 3

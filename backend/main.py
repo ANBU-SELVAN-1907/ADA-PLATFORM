@@ -16,6 +16,7 @@ import json
 from config import settings
 from agents.orchestration import construct_discovery_graph
 from services.report_service import ReportService
+from services.llm_service import active_provider_var
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,20 +36,11 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
-# Support comma-separated list of allowed origins, or wildcard
-_raw_origins = [o.strip() for o in FRONTEND_URL.split(",") if o.strip()]
-if "*" in _raw_origins or not _raw_origins:
-    ALLOWED_ORIGINS = ["*"]
-    ALLOW_CREDENTIALS = False  # Credentials CANNOT be used with wildcard origin
-else:
-    ALLOWED_ORIGINS = _raw_origins
-    ALLOW_CREDENTIALS = True
-
-# CORS middleware
+# CORS middleware for secure cross-origin resource sharing
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=ALLOW_CREDENTIALS,
+    allow_origins=[FRONTEND_URL],  # Restrict to frontend origin
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -69,11 +61,12 @@ class DiscoveryRequest(BaseModel):
     omniroute_key: Optional[str] = None
     openai_key: Optional[str] = None
     gemini_key: Optional[str] = None
+    active_provider: Optional[str] = None
     format: Literal["docx", "pdf"] = "docx"
 
 
 @app.post("/api/v1/discover")
-@limiter.limit("20/minute")
+@limiter.limit("5/minute")
 async def run_discovery(request: Request, payload: DiscoveryRequest):
     logger.info(f"Discovery request received: {payload.repo_url} [{payload.format.upper()}]")
 
@@ -91,6 +84,7 @@ async def run_discovery(request: Request, payload: DiscoveryRequest):
     initial_state = {
         "repo_url": payload.repo_url,
         "github_token": payload.github_token or os.getenv("ADA_GITHUB_TOKEN", None),
+        "active_provider": payload.active_provider,
         "api_keys": {
             "omniroute": omniroute_api_key,
             "openai": openai_api_key,
@@ -125,7 +119,11 @@ async def run_discovery(request: Request, payload: DiscoveryRequest):
     try:
         compiled_graph = construct_discovery_graph()
         logger.info("LangGraph pipeline compiled. Invoking 7-agent discovery chain...")
-        final_state = compiled_graph.invoke(initial_state)
+        token = active_provider_var.set(payload.active_provider)
+        try:
+            final_state = compiled_graph.invoke(initial_state)
+        finally:
+            active_provider_var.reset(token)
 
         # Propagate repo_url into final state for the report service
         final_state["repo_url"] = payload.repo_url
@@ -183,7 +181,7 @@ async def run_discovery(request: Request, payload: DiscoveryRequest):
 
 
 @app.post("/api/v1/discover/stream")
-@limiter.limit("20/minute")
+@limiter.limit("5/minute")
 async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
     logger.info(f"Discovery stream request received: {payload.repo_url} [{payload.format.upper()}]")
 
@@ -200,6 +198,7 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
     initial_state = {
         "repo_url": payload.repo_url,
         "github_token": payload.github_token or os.getenv("ADA_GITHUB_TOKEN", None),
+        "active_provider": payload.active_provider,
         "api_keys": {
             "omniroute": omniroute_api_key,
             "openai": openai_api_key,
@@ -225,118 +224,122 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
     }
 
     def sse_generator():
-        # Yield the starting of the first step
-        yield f"event: agent_start\ndata: {json.dumps({'agentId': 'repo'})}\n\n"
-        
-        current_state = initial_state.copy()
-        
+        token = active_provider_var.set(payload.active_provider)
         try:
-            compiled_graph = construct_discovery_graph()
+            # Yield the starting of the first step
+            yield f"event: agent_start\ndata: {json.dumps({'agentId': 'repo'})}\n\n"
             
-            NODE_TO_STEP_ID = {
-                "repository_analyzer": "repo",
-                "technology_discovery": "tech",
-                "dependency_discovery": "dep",
-                "infrastructure_discovery": "infra",
-                "security_auditor": "sec",
-                "documentation_miner": "doc",
-                "architecture_analyzer": "arch",
-                "telemetry_analyzer": "tele",
-                "schematic_analyzer": "schem",
-                "report_generator": "report"
-            }
+            current_state = initial_state.copy()
             
-            steps_order = [
-                "repository_analyzer",
-                "technology_discovery",
-                "dependency_discovery",
-                "infrastructure_discovery",
-                "security_auditor",
-                "documentation_miner",
-                "architecture_analyzer",
-                "telemetry_analyzer",
-                "schematic_analyzer",
-                "report_generator"
-            ]
-            
-            def get_next_node(current_node: str) -> Optional[str]:
-                try:
-                    idx = steps_order.index(current_node)
-                    if idx + 1 < len(steps_order):
-                        return steps_order[idx + 1]
-                except ValueError:
-                    pass
-                return None
-            
-            # Run LangGraph streaming execution
-            for output in compiled_graph.stream(initial_state):
-                for node_name, state_delta in output.items():
-                    current_state.update(state_delta)
-                    
-                    step_id = NODE_TO_STEP_ID.get(node_name)
-                    if step_id:
-                        logs = state_delta.get("execution_logs", [])
-                        if not logs:
-                            logs = [f"Agent {step_id.upper()} execution completed successfully."]
+            try:
+                compiled_graph = construct_discovery_graph()
+                
+                NODE_TO_STEP_ID = {
+                    "repository_analyzer": "repo",
+                    "technology_discovery": "tech",
+                    "dependency_discovery": "dep",
+                    "infrastructure_discovery": "infra",
+                    "security_auditor": "sec",
+                    "documentation_miner": "doc",
+                    "architecture_analyzer": "arch",
+                    "telemetry_analyzer": "tele",
+                    "schematic_analyzer": "schem",
+                    "report_generator": "report"
+                }
+                
+                steps_order = [
+                    "repository_analyzer",
+                    "technology_discovery",
+                    "dependency_discovery",
+                    "infrastructure_discovery",
+                    "security_auditor",
+                    "documentation_miner",
+                    "architecture_analyzer",
+                    "telemetry_analyzer",
+                    "schematic_analyzer",
+                    "report_generator"
+                ]
+                
+                def get_next_node(current_node: str) -> Optional[str]:
+                    try:
+                        idx = steps_order.index(current_node)
+                        if idx + 1 < len(steps_order):
+                            return steps_order[idx + 1]
+                    except ValueError:
+                        pass
+                    return None
+                
+                # Run LangGraph streaming execution
+                for output in compiled_graph.stream(initial_state):
+                    for node_name, state_delta in output.items():
+                        current_state.update(state_delta)
                         
-                        yield f"event: agent_complete\ndata: {json.dumps({'agentId': step_id, 'logs': logs})}\n\n"
-                        
-                        next_node = get_next_node(node_name)
-                        if next_node:
-                            next_step_id = NODE_TO_STEP_ID.get(next_node)
-                            if next_step_id:
-                                yield f"event: agent_start\ndata: {json.dumps({'agentId': next_step_id})}\n\n"
-            
-            # Compile the report
-            repo_base = current_state.get("repo_name") or payload.repo_url.split("/")[-1].replace(".git", "")
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            base_name = f"{repo_base}_{timestamp}"
-            
-            reporter = ReportService()
-            output_filepath = reporter.compile_report(
-                payload=current_state,
-                base_name=base_name,
-                output_dir=settings.OUTPUT_DIR,
-                file_format=payload.format
-            )
-            
-            response_payload = {
-                "repo_url": current_state.get("repo_url", payload.repo_url),
-                "repo_name": current_state.get("repo_name", ""),
-                "repo_owner": current_state.get("repo_owner", ""),
-                "files_scanned": len(current_state.get("repo_structure", {})),
-                "application_overview": current_state.get("application_overview", {}),
-                "technology_stack": current_state.get("technology_stack", {}),
-                "dependency_analysis": current_state.get("dependency_analysis", {}),
-                "infrastructure_insights": current_state.get("infrastructure_insights", {}),
-                "security_observability": current_state.get("security_observability", {}),
-                "telemetry_analysis": current_state.get("telemetry_analysis", {}),
-                "schematic_analysis": current_state.get("schematic_analysis", {}),
-                "doc_analysis": current_state.get("doc_analysis", {}),
-                "architecture_graph": current_state.get("architecture_graph", []),
-                "architecture_observations": current_state.get("architecture_observations", [])
-            }
-            
-            if output_filepath.startswith("http://") or output_filepath.startswith("https://"):
-                download_path = output_filepath
-            else:
-                download_path = f"/output/{Path(output_filepath).name}"
-            
-            complete_data = {
-                "status": "success",
-                "message": f"Enterprise discovery report compiled as {payload.format.upper()}.",
-                "report_path": download_path,
-                "repo": f"{current_state.get('repo_owner','')}/{current_state.get('repo_name','')}",
-                "files_scanned": len(current_state.get("repo_structure", {})),
-                "manifests_fetched": len(current_state.get("high_value_contents", {})),
-                "payload": response_payload
-            }
-            
-            yield f"event: complete\ndata: {json.dumps(complete_data)}\n\n"
-            
-        except Exception as e:
-            logger.exception("Error during streaming discovery pipeline execution.")
-            yield f"event: error\ndata: {json.dumps({'detail': str(e)})}\n\n"
+                        step_id = NODE_TO_STEP_ID.get(node_name)
+                        if step_id:
+                            logs = state_delta.get("execution_logs", [])
+                            if not logs:
+                                logs = [f"Agent {step_id.upper()} execution completed successfully."]
+                            
+                            yield f"event: agent_complete\ndata: {json.dumps({'agentId': step_id, 'logs': logs})}\n\n"
+                            
+                            next_node = get_next_node(node_name)
+                            if next_node:
+                                next_step_id = NODE_TO_STEP_ID.get(next_node)
+                                if next_step_id:
+                                    yield f"event: agent_start\ndata: {json.dumps({'agentId': next_step_id})}\n\n"
+                
+                # Compile the report
+                repo_base = current_state.get("repo_name") or payload.repo_url.split("/")[-1].replace(".git", "")
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                base_name = f"{repo_base}_{timestamp}"
+                
+                reporter = ReportService()
+                output_filepath = reporter.compile_report(
+                    payload=current_state,
+                    base_name=base_name,
+                    output_dir=settings.OUTPUT_DIR,
+                    file_format=payload.format
+                )
+                
+                response_payload = {
+                    "repo_url": current_state.get("repo_url", payload.repo_url),
+                    "repo_name": current_state.get("repo_name", ""),
+                    "repo_owner": current_state.get("repo_owner", ""),
+                    "files_scanned": len(current_state.get("repo_structure", {})),
+                    "application_overview": current_state.get("application_overview", {}),
+                    "technology_stack": current_state.get("technology_stack", {}),
+                    "dependency_analysis": current_state.get("dependency_analysis", {}),
+                    "infrastructure_insights": current_state.get("infrastructure_insights", {}),
+                    "security_observability": current_state.get("security_observability", {}),
+                    "telemetry_analysis": current_state.get("telemetry_analysis", {}),
+                    "schematic_analysis": current_state.get("schematic_analysis", {}),
+                    "doc_analysis": current_state.get("doc_analysis", {}),
+                    "architecture_graph": current_state.get("architecture_graph", []),
+                    "architecture_observations": current_state.get("architecture_observations", [])
+                }
+                
+                if output_filepath.startswith("http://") or output_filepath.startswith("https://"):
+                    download_path = output_filepath
+                else:
+                    download_path = f"/output/{Path(output_filepath).name}"
+                
+                complete_data = {
+                    "status": "success",
+                    "message": f"Enterprise discovery report compiled as {payload.format.upper()}.",
+                    "report_path": download_path,
+                    "repo": f"{current_state.get('repo_owner','')}/{current_state.get('repo_name','')}",
+                    "files_scanned": len(current_state.get("repo_structure", {})),
+                    "manifests_fetched": len(current_state.get("high_value_contents", {})),
+                    "payload": response_payload
+                }
+                
+                yield f"event: complete\ndata: {json.dumps(complete_data)}\n\n"
+                
+            except Exception as e:
+                logger.exception("Error during streaming discovery pipeline execution.")
+                yield f"event: error\ndata: {json.dumps({'detail': str(e)})}\n\n"
+        finally:
+            active_provider_var.reset(token)
 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")
 

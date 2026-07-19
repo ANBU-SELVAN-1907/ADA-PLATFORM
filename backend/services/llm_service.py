@@ -5,8 +5,14 @@ from enum import Enum
 from typing import List, Dict, Any, Optional
 import json
 import httpx
+import boto3
+from botocore.exceptions import ClientError
+import contextvars
 
 logger = logging.getLogger("ADA.LLMService")
+
+# Thread/async-safe context variable to propagate the active provider from request context
+active_provider_var = contextvars.ContextVar("active_provider", default=None)
 
 class ErrorCategory(Enum):
     RATE_LIMIT = "429_RATE_LIMIT"
@@ -21,28 +27,42 @@ class LLMService:
         api_url: Optional[str] = None,
         api_key: Optional[str] = None,
         openai_key: Optional[str] = None,
-        gemini_key: Optional[str] = None
+        gemini_key: Optional[str] = None,
+        active_provider: Optional[str] = None
     ):
         self.api_url = api_url or os.getenv("ADA_OMNIROUTE_URL", "https://api.omniroute.ai/v1/chat/completions")
-        # Strip empty strings so they are not treated as valid keys
-        self.api_key    = (api_key    or os.getenv("ADA_OMNIROUTE_KEY", "")).strip()
-        self.openai_key = (openai_key or os.getenv("ADA_OPENAI_KEY",    os.getenv("OPENAI_API_KEY", ""))).strip()
-        self.gemini_key = (gemini_key or os.getenv("ADA_GEMINI_KEY",    os.getenv("GEMINI_API_KEY", ""))).strip()
+        self.api_key = api_key or os.getenv("ADA_OMNIROUTE_KEY", "")
+        self.openai_key = openai_key or os.getenv("ADA_OPENAI_KEY", os.getenv("OPENAI_API_KEY", ""))
+        self.gemini_key = gemini_key or os.getenv("ADA_GEMINI_KEY", os.getenv("GEMINI_API_KEY", ""))
         
-        # Build priority models list dynamically based on provided keys.
-        # If the user explicitly provided custom keys (Gemini or OpenAI) in the UI,
-        # we only use the models that correspond to those keys. This prevents
-        # unauthorized fallback requests to other providers (which would fail anyway).
+        # Get active provider from contextvar if not explicitly passed
+        provider = active_provider or active_provider_var.get()
+        
+        # Build priority models list dynamically based on active provider
         self.models: List[str] = []
         
-        if self.gemini_key:
-            self.models.extend(["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"])
+        # 1. Prioritize active provider models first
+        if provider == "gemini" and self.gemini_key:
+            self.models.extend(["gemini-3.5-flash", "gemini-2.0-flash"])
+        elif provider == "openai" and self.openai_key:
+            self.models.extend(["gpt-4o-mini", "gpt-4o"])
+        elif provider == "omniroute" and self.api_key:
+            primary_model = os.getenv("ADA_PRIMARY_MODEL")
+            if primary_model:
+                self.models.append(primary_model)
+            default_omni = ["auto/best-free", "openai/best-free", "if/qwen3-coder-plus", "if/deepseek-r1", "glmt/glm-4.7"]
+            for m in default_omni:
+                if m not in self.models:
+                    self.models.append(m)
 
+        # 2. Append remaining configured provider models as fallback options
+        if self.gemini_key and "gemini-3.5-flash" not in self.models:
+            self.models.extend(["gemini-3.5-flash", "gemini-2.0-flash"])
             
-        if self.openai_key:
+        if self.openai_key and "gpt-4o-mini" not in self.models:
             self.models.extend(["gpt-4o-mini", "gpt-4o"])
             
-        if self.api_key:
+        if self.api_key and "auto/best-free" not in self.models:
             primary_model = os.getenv("ADA_PRIMARY_MODEL")
             if primary_model and primary_model not in self.models:
                 self.models.append(primary_model)
@@ -189,8 +209,6 @@ class LLMService:
             for attempt in range(1, max_retries + 1):
                 if model.startswith("bedrock/"):
                     try:
-                        import boto3  # lazy import — only needed for Bedrock
-                        from botocore.exceptions import ClientError
                         bedrock = boto3.client('bedrock-runtime', region_name=os.getenv("AWS_REGION", "us-east-1"))
                         
                         system_text = system_prompt
@@ -236,9 +254,6 @@ class LLMService:
                         continue
                         
                 else:
-                    # Read max_tokens from env — critical for OpenAI which defaults low
-                    max_tokens = int(os.getenv("ADA_LLM_MAX_TOKENS", "8000"))
-
                     payload: Dict[str, Any] = {
                         "model": request_model,
                         "messages": [
@@ -246,81 +261,63 @@ class LLMService:
                             {"role": "user", "content": user_prompt}
                         ],
                         "temperature": 0.0,
-                        "max_tokens": max_tokens,
                         "stream": False  # Force standard non-streaming static block responses
                     }
-
-                    # OpenAI requires strict schema compliance for json_schema mode.
-                    # Use json_object instead — the system prompts already say "Return ONLY valid JSON".
-                    # Gemini's OpenAI-compatible API accepts json_schema without strict mode.
-                    is_openai_direct = "openai.com" in current_url
+                    
                     if response_schema:
-                        if is_openai_direct:
-                            # json_object is more reliable for OpenAI — avoids 400 strict schema errors
-                            payload["response_format"] = {"type": "json_object"}
-                        else:
-                            payload["response_format"] = {
-                                "type": "json_schema",
-                                "json_schema": {
-                                    "name": "analysis_response",
-                                    "schema": response_schema
-                                }
+                        payload["response_format"] = {
+                            "type": "json_schema",
+                            "json_schema": {
+                                "name": "analysis_response",
+                                "schema": response_schema
                             }
+                        }
 
                     try:
-                        with httpx.Client(timeout=120.0) as client:
+                        with httpx.Client(timeout=90.0) as client:
                             response = client.post(current_url, headers=headers, json=payload)
-
-                            # Fallback: if non-OpenAI endpoint rejects json_schema, retry with json_object
-                            if response.status_code == 400 and not is_openai_direct and (
-                                "response_format" in response.text or "json_schema" in response.text
-                            ):
-                                logger.warning(f"Model {request_model} failed with json_schema. Retrying with json_object.")
+                            
+                            if response.status_code == 400 and ("response_format" in response.text or "json_schema" in response.text or "schema" in response.text):
+                                logger.warning(f"Model {request_model} failed with json_schema. Retrying with json_object format.")
                                 payload["response_format"] = {"type": "json_object"}
                                 response = client.post(current_url, headers=headers, json=payload)
-
-                            # Read response data inside the client context
-                            resp_status = response.status_code
-                            resp_text   = response.text
                             
-
-                        if resp_status == 200:
+                        if response.status_code == 200:
                             try:
-                                data = json.loads(resp_text)
+                                data = response.json()
                             except Exception as json_err:
-                                logger.error(f"Endpoint status 200 but failed to parse JSON: {str(json_err)}. Snippet: {resp_text[:150]}")
+                                logger.error(f"Endpoint status 200 but failed to parse JSON object: {str(json_err)}. Content raw snippet: {response.text[:150]}")
                                 if attempt == max_retries:
-                                    self.mark_model_dead(model, "Malformed non-JSON response on 200 OK.")
+                                    self.mark_model_dead(model, f"Malformed non-JSON snippet streaming returned on 200 OK.")
                                     break
                                 time.sleep(self._rate_limit_wait(attempt, ErrorCategory.EMPTY_RESPONSE))
                                 continue
-
+                                
                             content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-
+                            
                             if not content or len(content.strip()) == 0:
                                 if attempt == max_retries:
                                     self.mark_model_dead(model, "Empty content payload fields.")
                                     break
                                 time.sleep(self._rate_limit_wait(attempt, ErrorCategory.EMPTY_RESPONSE))
                                 continue
-
+                                
                             self.combo_503_count = 0
                             return {"model_used": model, "raw_output": content}
-
-                        category = self._classify_error(resp_status, resp_text)
-
+                            
+                        category = self._classify_error(response.status_code, response.text)
+                        
                         if category in (ErrorCategory.AUTH_BILLING, ErrorCategory.UNKNOWN):
-                            self.mark_model_dead(model, f"Permanent error {resp_status}: {resp_text[:200]}")
+                            self.mark_model_dead(model, f"Permanent error {response.status_code}: {response.text}")
                             break
-
+                            
                         if attempt == max_retries:
-                            self.mark_model_dead(model, f"Exhausted total retries. Last status: {resp_status}")
+                            self.mark_model_dead(model, f"Exhausted total retries. Last status code: {response.status_code}")
                             break
-
+                            
                         wait_sec = self._rate_limit_wait(attempt, category)
                         logger.info(f"RETAIN {model} - attempt {attempt}/{max_retries} after {category.value}")
                         time.sleep(wait_sec)
-
 
                     except (httpx.RequestError, httpx.HTTPStatusError) as exc:
                         status = getattr(getattr(exc, 'response', None), 'status_code', 500)
