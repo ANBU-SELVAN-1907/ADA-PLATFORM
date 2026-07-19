@@ -14,12 +14,8 @@ if env_path.exists():
                 key, val = clean_line.split("=", 1)
                 os.environ.setdefault(key.strip(), val.strip())
 
-# ─── Built-in OmniRoute defaults (used when nothing is configured by user)
-# These are the platform-level credentials embedded in the backend so the app
-# works out-of-the-box for any new user with zero configuration.
-os.environ.setdefault("ADA_OMNIROUTE_BASE_URL",  "http://localhost:20128/v1")
-os.environ.setdefault("ADA_OMNIROUTE_API_KEY",   "sk-d7761e9ee5d99f65-3c7011-66f69f57")
-os.environ.setdefault("ADA_OMNIROUTE_MODEL",      "auto/best-free")
+# ─── Env-var alias mappings (NO hardcoded credentials — all secrets come from
+#     environment variables: ECS Task Definition on AWS, or .env for local dev)
 
 # Map ADA_OMNIROUTE_BASE_URL → ADA_OMNIROUTE_URL (append /chat/completions)
 if "ADA_OMNIROUTE_BASE_URL" in os.environ and "ADA_OMNIROUTE_URL" not in os.environ:
@@ -48,6 +44,8 @@ class Settings:
     APP_TYPE: str = "Deep Schematic Discovery Engine"
     VERSION_COUNT: str = "ADA-V3"
     OUTPUT_DIR: Path = Path("output")
+    # True when running on AWS ECS with Bedrock IAM role — no API keys needed
+    USE_BEDROCK: bool = os.getenv("ADA_USE_BEDROCK", "false").lower() == "true"
 
 
 settings = Settings()

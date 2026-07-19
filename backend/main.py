@@ -1,4 +1,4 @@
-import logging
+﻿import logging
 import os
 import time
 import queue
@@ -46,7 +46,7 @@ def _safe_json(obj: object) -> str:
 
 
 app = FastAPI(
-    title="Deloitte AI Insights — Deep Schematic Discovery Engine",
+    title="Deloitte AI Insights â€” Deep Schematic Discovery Engine",
     version=settings.APP_VERSION,
     description="Multi-agent framework for non-cloning codebase topology mapping and security scanning."
 )
@@ -97,16 +97,16 @@ async def run_discovery(request: Request, payload: DiscoveryRequest):
     openai_api_key = payload.openai_key or os.getenv("ADA_OPENAI_KEY", os.getenv("OPENAI_API_KEY", ""))
     gemini_api_key = payload.gemini_key or os.getenv("ADA_GEMINI_KEY", os.getenv("GEMINI_API_KEY", ""))
 
-    is_bedrock_active = (payload.active_provider == "bedrock") or (os.getenv("ADA_USE_BEDROCK", "false").lower() == "true")
+    is_bedrock_active = (payload.active_provider == "bedrock") or (settings.USE_BEDROCK)
 
-    # Allow request if: Bedrock is active, OR any key is present (including built-in OmniRoute defaults)
+    # Allow: Bedrock active (IAM role — no key needed), OR any user-provided API key
     if not is_bedrock_active and not (omniroute_api_key or openai_api_key or gemini_api_key):
         raise HTTPException(
             status_code=400,
-            detail="Missing required API key. Please provide at least one key for Omniroute, Gemini, or OpenAI."
+            detail="No LLM provider configured. Add an API key in Settings, or deploy to AWS to use Bedrock automatically."
         )
 
-    # Full initial state — all keys pre-declared so LangGraph carries them correctly
+    # Full initial state â€” all keys pre-declared so LangGraph carries them correctly
     initial_state = {
         "repo_url": payload.repo_url,
         "github_token": payload.github_token or os.getenv("ADA_GITHUB_TOKEN", None),
@@ -225,13 +225,13 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
     openai_api_key = payload.openai_key or os.getenv("ADA_OPENAI_KEY", os.getenv("OPENAI_API_KEY", ""))
     gemini_api_key = payload.gemini_key or os.getenv("ADA_GEMINI_KEY", os.getenv("GEMINI_API_KEY", ""))
 
-    is_bedrock_active = (payload.active_provider == "bedrock") or (os.getenv("ADA_USE_BEDROCK", "false").lower() == "true")
+    is_bedrock_active = (payload.active_provider == "bedrock") or (settings.USE_BEDROCK)
 
-    # Allow request if: Bedrock is active, OR any key is present (including built-in OmniRoute defaults)
+    # Allow: Bedrock active (IAM role — no key needed), OR any user-provided API key
     if not is_bedrock_active and not (omniroute_api_key or openai_api_key or gemini_api_key):
         raise HTTPException(
             status_code=400,
-            detail="Missing required API key. Please provide at least one key for Omniroute, Gemini, or OpenAI."
+            detail="No LLM provider configured. Add an API key in Settings, or deploy to AWS to use Bedrock automatically."
         )
 
     initial_state = {
@@ -391,7 +391,7 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
         # Yield the first agent_start event immediately
         yield f"event: agent_start\ndata: {json.dumps({'agentId': 'repo'})}\n\n"
 
-        HEARTBEAT_INTERVAL = 20  # seconds — well under the 60s ALB idle timeout
+        HEARTBEAT_INTERVAL = 20  # seconds â€” well under the 60s ALB idle timeout
         last_heartbeat = time.monotonic()
 
         # Stream events from the queue; send keepalive heartbeats between events
@@ -404,7 +404,7 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
                     break
                 yield item
             except queue.Empty:
-                # No event within timeout window — send a heartbeat ping
+                # No event within timeout window â€” send a heartbeat ping
                 yield ": heartbeat\n\n"
                 last_heartbeat = time.monotonic()
                 continue
@@ -423,7 +423,10 @@ async def health_check(request: Request):
         "status": "healthy",
         "engine": settings.APP_TYPE,
         "version": settings.APP_VERSION,
-        "framework_layer": settings.VERSION_COUNT
+        "framework_layer": settings.VERSION_COUNT,
+        # Tells the frontend whether Bedrock is active (AWS deployment with IAM role)
+        # Frontend uses this to auto-select Bedrock as the default provider
+        "bedrock_mode": settings.USE_BEDROCK,
     }
 
 # 1. Mount the output directory to enable safe downloads
@@ -442,4 +445,5 @@ if frontend_dist_path.exists():
         if file_path.exists() and file_path.is_file():
             return FileResponse(file_path)
         return FileResponse(frontend_dist_path / "index.html")
+
 

@@ -92,9 +92,9 @@ const AGENT_STEPS: AgentStep[] = [
 
 const DEFAULT_PROVIDERS = {
   omniroute: {
-    apiKey: localStorage.getItem('ada_provider_omniroute_key') || 'sk-d7761e9ee5d99f65-3c7011-66f69f57',
-    endpoint: localStorage.getItem('ada_provider_omniroute_endpoint') || 'http://localhost:20128/v1',
-    customModel: localStorage.getItem('ada_provider_omniroute_customModel') || 'auto/best-free',
+    apiKey: localStorage.getItem('ada_provider_omniroute_key') || '',
+    endpoint: localStorage.getItem('ada_provider_omniroute_endpoint') || '',
+    customModel: localStorage.getItem('ada_provider_omniroute_customModel') || '',
     enabled: true,
   },
   gemini: {

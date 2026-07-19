@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useStore } from './store'
 import { MotionProvider, PageTransition } from './components/motion'
 import { LandingPage } from './components/landing/LandingPage'
@@ -7,7 +7,7 @@ import { ResultsPage } from './components/results/ResultsPage'
 import { TopNav } from './components/nav/TopNav'
 import { SettingsModal } from './components/settings/SettingsModal'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
-import { discover, streamDiscovery, getMockResponse } from './api/client'
+import { streamDiscovery, getHealth } from './api/client'
 
 export default function App() {
   const {
@@ -27,19 +27,35 @@ export default function App() {
     addLog,
     clearLogs,
     activeProvider,
+    setActiveProvider,
   } = useStore()
 
   useKeyboardShortcuts()
 
+  // On mount: call health endpoint to detect AWS Bedrock mode.
+  // If bedrock_mode=true, auto-switch to Bedrock — zero config needed on AWS.
+  useEffect(() => {
+    getHealth().then((health) => {
+      if ((health as any).bedrock_mode === true) {
+        // Only auto-switch if user hasn't explicitly chosen a different provider
+        const savedProvider = localStorage.getItem('ada_active_provider')
+        if (!savedProvider || savedProvider === 'omniroute') {
+          setActiveProvider('bedrock')
+        }
+      }
+    }).catch(() => {
+      // Health check failed (backend not ready yet) — no action needed
+    })
+  }, [])
+
   const handleStartDiscovery = async (url: string) => {
     if (!url.trim()) return
 
-    // OmniRoute is always available (built-in backend defaults)
-    // Only block if a non-omniroute provider is active and has no key
+    // Only block if a non-omniroute, non-bedrock provider is active and has no key configured
     const activeProviderObj = providers[activeProvider as keyof typeof providers]
-    const isOmniRoute = activeProvider === 'omniroute'
-    if (!isOmniRoute && activeProviderObj && !activeProviderObj.apiKey && activeProvider !== 'bedrock') {
-      setError(`${activeProvider} is selected but has no API key. Open Settings (⚙) to add one, or switch to OmniRoute.`)
+    const isAutoProvider = activeProvider === 'omniroute' || activeProvider === 'bedrock'
+    if (!isAutoProvider && activeProviderObj && !activeProviderObj.apiKey) {
+      setError(`${activeProvider} is selected but has no API key. Open Settings (⚙) to add one, or switch to OmniRoute / Bedrock.`)
       setPage('processing')
       return
     }
