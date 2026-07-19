@@ -102,6 +102,13 @@ class ReportService:
         run.font.name = tmpl.FONT_FAMILY
 
     def compile_report(self, payload: dict, base_name: str, output_dir: Path, file_format: str) -> str:
+        def get_lang_name(lang_obj):
+            if isinstance(lang_obj, dict):
+                return lang_obj.get("name", "Unknown")
+            elif isinstance(lang_obj, str):
+                return lang_obj
+            return "Unknown"
+
         output_dir.mkdir(parents=True, exist_ok=True)
         docx_path = output_dir / f"ADA_{base_name}.docx"
         
@@ -335,10 +342,11 @@ class ReportService:
         total_lines = total_chars // 32
         
         primary_lang = "Unknown"
-        if tech_data.get("languages"):
-            primary_lang = tech_data["languages"][0].get("name", "Unknown")
-            if len(tech_data["languages"]) > 1:
-                primary_lang += f" (Backend) | {tech_data['languages'][-1].get('name', 'JS')} (Frontend)"
+        langs_list = tech_data.get("languages")
+        if langs_list and isinstance(langs_list, list):
+            primary_lang = get_lang_name(langs_list[0])
+            if len(langs_list) > 1:
+                primary_lang += f" (Backend) | {get_lang_name(langs_list[-1])} (Frontend)"
 
         tele_rows = [
             ("Application Name", repo_name or repo_display),
@@ -347,7 +355,7 @@ class ReportService:
             ("Primary Language", primary_lang),
             ("Architecture Style", app_overview.get("architecture_style") or "Layered Component Architecture"),
             ("System Components", app_overview.get("system_components_summary") or ", ".join(
-                [c.get("name", "") for c in app_overview.get("logical_components", [])[:5]]
+                [(c.get("name", "") if isinstance(c, dict) else str(c)) for c in app_overview.get("logical_components", [])[:5]]
             ) or "Analysis pending — re-run pipeline.")
         ]
         
@@ -405,6 +413,11 @@ class ReportService:
 
         for idx, item in enumerate(logical_components):
             row = comp_table.add_row()
+            if isinstance(item, str):
+                item = {"name": item, "path": "", "role_purpose": ""}
+            elif not isinstance(item, dict):
+                item = {"name": str(item), "path": "", "role_purpose": ""}
+                
             c1 = row.cells[0]
             c1.text = item.get("name", "")
             c2 = row.cells[1]
@@ -436,7 +449,11 @@ class ReportService:
         # AI-generated repo-specific tech summary from tech agent
         stack_summary = tech_data.get("stack_summary", "")
         if not stack_summary and tech_data.get("languages"):
-            langs = ", ".join([l.get("name", "") for l in tech_data["languages"][:3]])
+            langs_list = tech_data.get("languages", [])
+            if isinstance(langs_list, list):
+                langs = ", ".join([get_lang_name(l) for l in langs_list[:3]])
+            else:
+                langs = "Unknown"
             stack_summary = f"The repository uses {langs} as its primary language(s). Full technology stack details are listed in the table below."
         elif not stack_summary:
             stack_summary = f"Technology stack analysis for '{repo_display}' is detailed in the table below."
