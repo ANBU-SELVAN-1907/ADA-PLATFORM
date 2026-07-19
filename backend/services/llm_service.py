@@ -252,8 +252,10 @@ class LLMService:
                             "temperature": 0.0
                         }
                         
+                        # Strip "bedrock/" prefix for the native Bedrock runtime API
+                        model_id = request_model.replace("bedrock/", "", 1)
                         response = bedrock.invoke_model(
-                            modelId=request_model,
+                            modelId=model_id,
                             body=json.dumps(bedrock_payload),
                             contentType="application/json",
                             accept="application/json"
