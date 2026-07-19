@@ -21,7 +21,7 @@ export interface Store {
 
   // LLM Provider Configuration
   activeProvider: string
-  providers: Record<string, { apiKey: string; endpoint: string; enabled: boolean }>
+  providers: Record<string, { apiKey: string; endpoint: string; customModel?: string; enabled: boolean }>
 
   // Agent progress
   agentSteps: AgentStep[]
@@ -48,6 +48,7 @@ export interface Store {
   setActiveProvider: (id: string) => void
   setProviderKey: (id: string, key: string) => void
   setProviderEndpoint: (id: string, endpoint: string) => void
+  setProviderModel: (id: string, model: string) => void
   toggleProvider: (id: string) => void
   getActiveProviderConfig: () => { apiKey: string; endpoint: string } | null
 
@@ -93,26 +94,31 @@ const DEFAULT_PROVIDERS = {
   omniroute: {
     apiKey: localStorage.getItem('ada_provider_omniroute_key') || '',
     endpoint: localStorage.getItem('ada_provider_omniroute_endpoint') || 'https://api.omniroute.ai/v1',
+    customModel: localStorage.getItem('ada_provider_omniroute_customModel') || '',
     enabled: true,
   },
   gemini: {
     apiKey: localStorage.getItem('ada_provider_gemini_key') || '',
     endpoint: localStorage.getItem('ada_provider_gemini_endpoint') || 'https://generativelanguage.googleapis.com',
+    customModel: localStorage.getItem('ada_provider_gemini_customModel') || '',
     enabled: false,
   },
   openai: {
     apiKey: localStorage.getItem('ada_provider_openai_key') || '',
     endpoint: localStorage.getItem('ada_provider_openai_endpoint') || 'https://api.openai.com/v1',
+    customModel: localStorage.getItem('ada_provider_openai_customModel') || '',
     enabled: false,
   },
   anthropic: {
     apiKey: localStorage.getItem('ada_provider_anthropic_key') || '',
     endpoint: localStorage.getItem('ada_provider_anthropic_endpoint') || 'https://api.anthropic.com',
+    customModel: localStorage.getItem('ada_provider_anthropic_customModel') || '',
     enabled: false,
   },
   azure: {
     apiKey: localStorage.getItem('ada_provider_azure_key') || '',
     endpoint: localStorage.getItem('ada_provider_azure_endpoint') || 'https://{resource}.openai.azure.com',
+    customModel: localStorage.getItem('ada_provider_azure_customModel') || '',
     enabled: false,
   },
 }
@@ -178,6 +184,15 @@ export const useStore = create<Store>()(
         providers: {
           ...s.providers,
           [id]: { ...s.providers[id], endpoint },
+        },
+      }))
+    },
+    setProviderModel: (id, model) => {
+      localStorage.setItem(`ada_provider_${id}_customModel`, model)
+      set((s) => ({
+        providers: {
+          ...s.providers,
+          [id]: { ...s.providers[id], customModel: model },
         },
       }))
     },

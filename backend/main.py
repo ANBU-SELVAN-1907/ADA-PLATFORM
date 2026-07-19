@@ -16,7 +16,7 @@ import json
 from config import settings
 from agents.orchestration import construct_discovery_graph
 from services.report_service import ReportService
-from services.llm_service import active_provider_var, omniroute_url_var
+from services.llm_service import active_provider_var, omniroute_url_var, omniroute_model_var
 
 logging.basicConfig(
     level=logging.INFO,
@@ -60,6 +60,7 @@ class DiscoveryRequest(BaseModel):
     github_token: Optional[str] = None
     omniroute_key: Optional[str] = None
     omniroute_url: Optional[str] = None
+    omniroute_model: Optional[str] = None
     openai_key: Optional[str] = None
     gemini_key: Optional[str] = None
     active_provider: Optional[str] = None
@@ -122,11 +123,13 @@ async def run_discovery(request: Request, payload: DiscoveryRequest):
         logger.info("LangGraph pipeline compiled. Invoking 7-agent discovery chain...")
         token = active_provider_var.set(payload.active_provider)
         url_token = omniroute_url_var.set(payload.omniroute_url)
+        model_token = omniroute_model_var.set(payload.omniroute_model)
         try:
             final_state = compiled_graph.invoke(initial_state)
         finally:
             active_provider_var.reset(token)
             omniroute_url_var.reset(url_token)
+            omniroute_model_var.reset(model_token)
 
         # Propagate repo_url into final state for the report service
         final_state["repo_url"] = payload.repo_url
@@ -229,6 +232,7 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
     def sse_generator():
         token = active_provider_var.set(payload.active_provider)
         url_token = omniroute_url_var.set(payload.omniroute_url)
+        model_token = omniroute_model_var.set(payload.omniroute_model)
         try:
             # Yield the starting of the first step
             yield f"event: agent_start\ndata: {json.dumps({'agentId': 'repo'})}\n\n"
@@ -345,6 +349,7 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
         finally:
             active_provider_var.reset(token)
             omniroute_url_var.reset(url_token)
+            omniroute_model_var.reset(model_token)
 
     return StreamingResponse(sse_generator(), media_type="text/event-stream")
 

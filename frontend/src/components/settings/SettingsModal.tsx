@@ -15,20 +15,24 @@ function ProviderCard({
   isEnabled, 
   apiKey, 
   endpoint,
+  customModel = '',
   onActivate, 
   onToggle,
   onKeyChange,
-  onEndpointChange
+  onEndpointChange,
+  onModelChange
 }: {
   provider: typeof LLM_PROVIDERS[0]
   isActive: boolean
   isEnabled: boolean
   apiKey: string
   endpoint: string
+  customModel?: string
   onActivate: () => void
   onToggle: () => void
   onKeyChange: (key: string) => void
   onEndpointChange: (endpoint: string) => void
+  onModelChange: (model: string) => void
 }) {
   const [showKey, setShowKey] = useState(false)
   const [isExpanded, setIsExpanded] = useState(isActive)
@@ -148,6 +152,21 @@ function ProviderCard({
                 />
               </div>
 
+              {/* Model Input */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-text-secondary uppercase tracking-wider flex items-center gap-1.5">
+                  <Brain size={11} />
+                  Model ID / Name
+                </label>
+                <input
+                  type="text"
+                  value={customModel}
+                  onChange={(e) => onModelChange(e.target.value)}
+                  placeholder="e.g. auto/best-free or system.ai.glm-5-2"
+                  className="w-full bg-surface-elevated border border-surface-border rounded-xl px-3 py-2.5 text-sm text-text-primary placeholder:text-text-muted/50 focus:outline-none focus:border-discovery focus:ring-2 focus:ring-discovery/20 transition-all"
+                />
+              </div>
+
               {/* Activate Button */}
               {!isActive && (
                 <InteractiveHoverButton
@@ -193,6 +212,7 @@ export function SettingsModal() {
     setActiveProvider,
     setProviderKey,
     setProviderEndpoint,
+    setProviderModel,
     toggleProvider,
     reducedMotion,
     setReducedMotion,
@@ -291,10 +311,12 @@ export function SettingsModal() {
                       isEnabled={providers[provider.id]?.enabled || false}
                       apiKey={providers[provider.id]?.apiKey || ''}
                       endpoint={providers[provider.id]?.endpoint || provider.defaultEndpoint || ''}
+                      customModel={providers[provider.id]?.customModel || ''}
                       onActivate={() => setActiveProvider(provider.id)}
                       onToggle={() => toggleProvider(provider.id)}
                       onKeyChange={(key) => setProviderKey(provider.id, key)}
                       onEndpointChange={(endpoint) => setProviderEndpoint(provider.id, endpoint)}
+                      onModelChange={(model) => setProviderModel(provider.id, model)}
                     />
                   ))}
                 </div>

@@ -14,6 +14,7 @@ logger = logging.getLogger("ADA.LLMService")
 # Thread/async-safe context variable to propagate the active provider from request context
 active_provider_var = contextvars.ContextVar("active_provider", default=None)
 omniroute_url_var = contextvars.ContextVar("omniroute_url", default=None)
+omniroute_model_var = contextvars.ContextVar("omniroute_model", default=None)
 
 class ErrorCategory(Enum):
     RATE_LIMIT = "429_RATE_LIMIT"
@@ -59,8 +60,11 @@ class LLMService:
         else:
             # Default to Omniroute
             if self.api_key:
+                custom_model = omniroute_model_var.get()
+                if custom_model:
+                    self.models.append(custom_model)
                 primary_model = os.getenv("ADA_PRIMARY_MODEL")
-                if primary_model:
+                if primary_model and primary_model not in self.models:
                     self.models.append(primary_model)
                 default_omni = ["auto/best-free", "openai/best-free", "if/qwen3-coder-plus", "if/deepseek-r1", "glmt/glm-4.7"]
                 for m in default_omni:
@@ -75,6 +79,9 @@ class LLMService:
             self.models.extend(["gpt-4o-mini", "gpt-4o"])
             
         if self.api_key and "auto/best-free" not in self.models:
+            custom_model = omniroute_model_var.get()
+            if custom_model and custom_model not in self.models:
+                self.models.append(custom_model)
             primary_model = os.getenv("ADA_PRIMARY_MODEL")
             if primary_model and primary_model not in self.models:
                 self.models.append(primary_model)

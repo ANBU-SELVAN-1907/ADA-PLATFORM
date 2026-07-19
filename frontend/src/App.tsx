@@ -68,6 +68,7 @@ export default function App() {
         github_token: githubToken || null,
         omniroute_key: providers.omniroute?.apiKey || null,
         omniroute_url: providers.omniroute?.endpoint || null,
+        omniroute_model: providers.omniroute?.customModel || null,
         gemini_key: providers.gemini?.apiKey || null,
         openai_key: providers.openai?.apiKey || null,
         active_provider: activeProvider,
