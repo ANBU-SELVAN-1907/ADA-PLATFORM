@@ -7,7 +7,7 @@ import { ResultsPage } from './components/results/ResultsPage'
 import { TopNav } from './components/nav/TopNav'
 import { SettingsModal } from './components/settings/SettingsModal'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
-import { streamDiscovery, getHealth } from './api/client'
+import { streamDiscovery, getHealth, getMockResponse } from './api/client'
 
 export default function App() {
   const {
