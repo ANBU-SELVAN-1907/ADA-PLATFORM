@@ -41,19 +41,21 @@ class LLMService:
         # Build priority models list dynamically based on active provider
         self.models: List[str] = []
         
-        # 1. Prioritize active provider models first
+        # 1. Prioritize active provider models first (default to omniroute if active provider is not gemini/openai)
         if provider == "gemini" and self.gemini_key:
             self.models.extend(["gemini-3.5-flash", "gemini-2.0-flash"])
         elif provider == "openai" and self.openai_key:
             self.models.extend(["gpt-4o-mini", "gpt-4o"])
-        elif provider == "omniroute" and self.api_key:
-            primary_model = os.getenv("ADA_PRIMARY_MODEL")
-            if primary_model:
-                self.models.append(primary_model)
-            default_omni = ["auto/best-free", "openai/best-free", "if/qwen3-coder-plus", "if/deepseek-r1", "glmt/glm-4.7"]
-            for m in default_omni:
-                if m not in self.models:
-                    self.models.append(m)
+        else:
+            # Default to Omniroute
+            if self.api_key:
+                primary_model = os.getenv("ADA_PRIMARY_MODEL")
+                if primary_model:
+                    self.models.append(primary_model)
+                default_omni = ["auto/best-free", "openai/best-free", "if/qwen3-coder-plus", "if/deepseek-r1", "glmt/glm-4.7"]
+                for m in default_omni:
+                    if m not in self.models:
+                        self.models.append(m)
 
         # 2. Append remaining configured provider models as fallback options
         if self.gemini_key and "gemini-3.5-flash" not in self.models:
