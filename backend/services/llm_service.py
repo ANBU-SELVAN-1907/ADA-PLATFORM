@@ -233,7 +233,9 @@ class LLMService:
                         custom_region = omniroute_url_var.get()
                         resolved_region = os.getenv("AWS_REGION", "us-east-1")
                         if custom_region and not custom_region.startswith("http") and "/" not in custom_region:
-                            resolved_region = custom_region.strip()
+                            clean_custom = custom_region.strip()
+                            if clean_custom and clean_custom != "bedrock-runtime":
+                                resolved_region = clean_custom
                         
                         logger.info(f"Initializing Amazon Bedrock client in region: {resolved_region}")
                         bedrock = boto3.client('bedrock-runtime', region_name=resolved_region)
@@ -270,9 +272,13 @@ class LLMService:
                         self.combo_503_count = 0
                         return {"model_used": model, "raw_output": content}
                         
-                    except ClientError as exc:
-                        status = exc.response.get('ResponseMetadata', {}).get('HTTPStatusCode', 500)
-                        text = str(exc)
+                    except Exception as exc:
+                        if isinstance(exc, ClientError):
+                            status = exc.response.get('ResponseMetadata', {}).get('HTTPStatusCode', 500)
+                            text = str(exc)
+                        else:
+                            status = 500
+                            text = str(exc)
                         category = self._classify_error(status, text)
                         if attempt == max_retries:
                             self.mark_model_dead(model, f"AWS Bedrock fault limit reached: {text}")

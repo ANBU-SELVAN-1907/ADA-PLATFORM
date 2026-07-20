@@ -248,6 +248,6 @@ export const LLM_PROVIDERS: LLMProvider[] = [
     description: 'Natively invoke Bedrock model without API keys inside AWS ECS',
     icon: 'cloud',
     color: '#FF9900',
-    defaultEndpoint: 'bedrock-runtime'
+    defaultEndpoint: ''
   },
 ]

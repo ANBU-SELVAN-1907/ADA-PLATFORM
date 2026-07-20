@@ -123,7 +123,7 @@ const DEFAULT_PROVIDERS = {
   },
   bedrock: {
     apiKey: localStorage.getItem('ada_provider_bedrock_key') || '',
-    endpoint: localStorage.getItem('ada_provider_bedrock_endpoint') || 'bedrock-runtime',
+    endpoint: localStorage.getItem('ada_provider_bedrock_endpoint') || '',
     customModel: localStorage.getItem('ada_provider_bedrock_customModel') || 'anthropic.claude-3-5-sonnet-20241022-v2:0',
     enabled: false,
   },
