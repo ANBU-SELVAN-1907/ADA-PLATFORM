@@ -10,6 +10,7 @@ from docx.oxml import parse_xml, OxmlElement
 from docx.oxml.ns import nsdecls, qn
 import boto3
 from botocore.exceptions import ClientError
+from services.llm_service import last_llm_error_var
 
 import report_template as tmpl
 
@@ -102,6 +103,9 @@ class ReportService:
         run.font.name = tmpl.FONT_FAMILY
 
     def compile_report(self, payload: dict, base_name: str, output_dir: Path, file_format: str) -> str:
+        err_msg = last_llm_error_var.get()
+        err_suffix = f" (LLM Exception: {err_msg})" if err_msg else ""
+
         def get_lang_name(lang_obj):
             if isinstance(lang_obj, dict):
                 return lang_obj.get("name", "Unknown")
@@ -356,7 +360,7 @@ class ReportService:
             ("Architecture Style", app_overview.get("architecture_style") or "Layered Component Architecture"),
             ("System Components", app_overview.get("system_components_summary") or ", ".join(
                 [(c.get("name", "") if isinstance(c, dict) else str(c)) for c in app_overview.get("logical_components", [])[:5]]
-            ) or "Analysis pending — re-run pipeline.")
+            ) or f"Analysis pending{err_suffix} — re-run pipeline.")
         ]
         
         for idx, (attr, val) in enumerate(tele_rows):
@@ -408,7 +412,7 @@ class ReportService:
         if not logical_components:
             # No fake data — show a single informational row
             logical_components = [
-                {"name": "Analysis Pending", "path": repo_display, "role_purpose": "Re-run the pipeline with a valid LLM API key to generate component mapping for this repository."}
+                {"name": "Analysis Pending", "path": repo_display, "role_purpose": f"Re-run the pipeline with a valid LLM API key to generate component mapping for this repository.{err_suffix}"}
             ]
 
         for idx, item in enumerate(logical_components):
@@ -465,7 +469,7 @@ class ReportService:
         tech_stack_table = tech_data.get("tech_stack_table", [])
         if not tech_stack_table:
             tech_stack_table = [
-                {"layer": "Analysis Pending", "technology": repo_display, "version": "—", "usage": "Re-run pipeline with a valid API key to populate the technology stack table."}
+                {"layer": "Analysis Pending", "technology": repo_display, "version": "—", "usage": f"Re-run pipeline with a valid API key to populate the technology stack table.{err_suffix}"}
             ]
 
         t_stack_table = doc.add_table(rows=1, cols=4)
@@ -540,7 +544,7 @@ class ReportService:
         dependency_table = dep_data.get("dependency_table", [])
         if not dependency_table:
             dependency_table = [
-                {"package": "Analysis Pending", "scope": repo_display, "purpose": "Re-run pipeline with a valid API key to populate the dependency table from this repository's manifests."}
+                {"package": "Analysis Pending", "scope": repo_display, "purpose": f"Re-run pipeline with a valid API key to populate the dependency table from this repository's manifests.{err_suffix}"}
             ]
 
         d_table = doc.add_table(rows=1, cols=3)
@@ -687,7 +691,7 @@ class ReportService:
         scaling_configurations = infra_data.get("scaling_configurations", [])
         if not scaling_configurations:
             scaling_configurations = [
-                {"property": "Analysis Pending", "constraint": f"Infrastructure analysis for '{repo_display}' is pending.", "recommendation": "Re-run pipeline with a valid API key for repository-specific infrastructure analysis."}
+                {"property": "Analysis Pending", "constraint": f"Infrastructure analysis for '{repo_display}' is pending.", "recommendation": f"Re-run pipeline with a valid API key for repository-specific infrastructure analysis.{err_suffix}"}
             ]
 
         doc.add_paragraph().add_run("Operational Scaling Configurations").bold = True
@@ -1230,9 +1234,15 @@ class ReportService:
         
         db_patterns = schematic_data.get("database_access_patterns", []) or ["Not explicitly documented in codebase source files."]
         auth_flow_str = schematic_data.get("auth_flow", "") or "Not explicitly documented in codebase source files."
+        if "Analysis pending" in auth_flow_str:
+            auth_flow_str = f"Analysis pending{err_suffix}."
         config_mgmt_str = schematic_data.get("config_management", "") or "Not explicitly documented in codebase source files."
+        if "Analysis pending" in config_mgmt_str:
+            config_mgmt_str = f"Analysis pending{err_suffix}."
         msg_patterns = schematic_data.get("messaging_patterns", []) or ["Not explicitly documented in codebase source files."]
         err_strat = schematic_data.get("error_handling_strategy", "") or "Not explicitly documented in codebase source files."
+        if "Analysis pending" in err_strat:
+            err_strat = f"Analysis pending{err_suffix}."
 
         subsections_data = [
             ("Database Access Patterns", db_patterns),

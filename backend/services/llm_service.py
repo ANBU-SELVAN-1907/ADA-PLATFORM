@@ -18,6 +18,7 @@ omniroute_model_var = contextvars.ContextVar("omniroute_model", default=None)
 omniroute_key_var = contextvars.ContextVar("omniroute_key", default=None)
 openai_key_var = contextvars.ContextVar("openai_key", default=None)
 gemini_key_var = contextvars.ContextVar("gemini_key", default=None)
+last_llm_error_var = contextvars.ContextVar("last_llm_error", default=None)
 
 class ErrorCategory(Enum):
     RATE_LIMIT = "429_RATE_LIMIT"
@@ -279,6 +280,7 @@ class LLMService:
                         else:
                             status = 500
                             text = str(exc)
+                        last_llm_error_var.set(text)
                         category = self._classify_error(status, text)
                         if attempt == max_retries:
                             self.mark_model_dead(model, f"AWS Bedrock fault limit reached: {text}")
@@ -340,6 +342,7 @@ class LLMService:
                             self.combo_503_count = 0
                             return {"model_used": model, "raw_output": content}
                             
+                        last_llm_error_var.set(f"HTTP {response.status_code}: {response.text}")
                         category = self._classify_error(response.status_code, response.text)
                         
                         if category in (ErrorCategory.AUTH_BILLING, ErrorCategory.UNKNOWN):
@@ -357,6 +360,7 @@ class LLMService:
                     except (httpx.RequestError, httpx.HTTPStatusError) as exc:
                         status = getattr(getattr(exc, 'response', None), 'status_code', 500)
                         text = getattr(getattr(exc, 'response', None), 'text', str(exc))
+                        last_llm_error_var.set(text)
                         category = self._classify_error(status, text)
                         
                         if attempt == max_retries:
@@ -369,4 +373,6 @@ class LLMService:
 
         execution_time = time.time() - start_time
         logger.critical(f"FALLING THROUGH: all {len(active_models)} models exhausted in {execution_time:.2f}s")
-        raise RuntimeError("Omniroute architecture processing failed to complete safely across the complete routing chain.")
+        err_msg = last_llm_error_var.get()
+        err_suffix = f" Last error details: {err_msg}" if err_msg else ""
+        raise RuntimeError(f"Omniroute architecture processing failed to complete safely across the complete routing chain.{err_suffix}")
