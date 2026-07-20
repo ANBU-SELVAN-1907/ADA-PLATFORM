@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import os
 import time
 import queue
@@ -417,7 +417,6 @@ async def run_discovery_stream(request: Request, payload: DiscoveryRequest):
 
 
 @app.get("/api/v1/health")
-@limiter.limit("60/minute")
 async def health_check(request: Request):
     return {
         "status": "healthy",
