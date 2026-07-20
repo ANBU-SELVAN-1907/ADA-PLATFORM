@@ -182,6 +182,7 @@ class LLMService:
         _default_omni_url = os.getenv("ADA_OMNIROUTE_URL", "https://api.omniroute.ai/v1/chat/completions")
         _has_custom_endpoint = bool(
             omniroute_url_var.get() and 
+            omniroute_url_var.get().strip().startswith("http") and
             omniroute_url_var.get().rstrip("/").rstrip("/chat/completions").strip() != 
             _default_omni_url.rstrip("/").rstrip("/chat/completions").strip()
         )

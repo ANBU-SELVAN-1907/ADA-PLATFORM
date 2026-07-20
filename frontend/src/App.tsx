@@ -56,7 +56,7 @@ export default function App() {
 
     // Read locally stored credentials
     const githubToken = localStorage.getItem('ada_github_token') || ''
-    
+
     // Clear logs and print startup status
     clearLogs()
     addLog(`Initiating codebase analysis for ${url.trim()}...`)
@@ -66,16 +66,16 @@ export default function App() {
       // Resolve the active provider's endpoint and key so the backend always
       // receives the correct custom URL, regardless of which card is "Active".
       const activeProviderConfig = providers[activeProvider as keyof typeof providers]
-      const resolvedEndpoint = (activeProviderConfig as any)?.endpoint || providers.omniroute?.endpoint || null
+      const resolvedEndpoint = (activeProviderConfig as any)?.endpoint || null
       const resolvedKey = (activeProviderConfig as any)?.apiKey || null
-      const resolvedModel = (activeProviderConfig as any)?.customModel || providers.omniroute?.customModel || null
+      const resolvedModel = (activeProviderConfig as any)?.customModel || null
 
       streamDiscovery({
         repo_url: url.trim(),
         github_token: githubToken || null,
-        omniroute_key: resolvedKey || providers.omniroute?.apiKey || null,
-        omniroute_url: resolvedEndpoint,
-        omniroute_model: resolvedModel,
+        omniroute_key: activeProvider === 'omniroute' ? resolvedKey : (providers.omniroute?.apiKey || null),
+        omniroute_url: activeProvider === 'omniroute' ? resolvedEndpoint : (providers.omniroute?.endpoint || null),
+        omniroute_model: activeProvider === 'omniroute' ? resolvedModel : (providers.omniroute?.customModel || null),
         gemini_key: providers.gemini?.apiKey || null,
         openai_key: providers.openai?.apiKey || null,
         active_provider: activeProvider,
@@ -145,11 +145,11 @@ export default function App() {
       if (stepIdx < totalSteps - 1) {
         const currentId = stepsList[stepIdx]
         const nextId = stepsList[stepIdx + 1]
-        
+
         completeStep(currentId)
         startStep(nextId)
         demoLogs[nextId]?.forEach(log => addLog(log))
-        
+
         stepIdx++
       } else {
         clearInterval(stepTimer)
