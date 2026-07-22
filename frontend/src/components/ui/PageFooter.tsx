@@ -65,15 +65,14 @@ export function PageFooter() {
               <User size={16} className="text-discovery" />
             </div>
             <div className="text-center md:text-left">
-              <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">Designed by</h4>
+              <h4 className="text-xs font-bold text-text-primary uppercase tracking-wider">Built & Developed by</h4>
               <p className="text-sm font-extrabold text-text-primary tracking-tight mt-0.5">Anbu Selvan T</p>
               <p className="text-[10px] text-text-muted">Full-Stack Engineer · AI Architect</p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 mt-2 bg-discovery/5 px-2.5 py-1 rounded-full border border-discovery/10">
-            <div className="w-1.5 h-1.5 rounded-full bg-discovery animate-pulse" />
-            <span className="text-[9px] text-text-secondary font-mono tracking-wider font-semibold">
-              Project for <span className="text-discovery font-extrabold">Deloitte</span>
+          <div className="flex items-center gap-1.5 mt-2 bg-discovery/5 px-3 py-1.5 rounded-full border border-discovery/15">
+            <span className="text-[10px] text-text-secondary font-mono tracking-wider font-semibold">
+              Project Submitted to <span className="font-sans font-black text-white text-xs tracking-tight ml-0.5">Deloitte<span className="text-[#86BC25] text-sm leading-none font-black ml-[1px]">.</span></span>
             </span>
           </div>
         </div>
