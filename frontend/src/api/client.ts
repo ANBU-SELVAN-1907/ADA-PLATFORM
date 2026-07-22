@@ -61,6 +61,7 @@ export function streamDiscovery(
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
+      let currentEvent = ''
       let completedSuccessfully = false
 
       while (true) {
@@ -71,10 +72,9 @@ export function streamDiscovery(
         const lines = buffer.split('\n')
         buffer = lines.pop() || ''
 
-        let currentEvent = ''
         for (const line of lines) {
           const trimmed = line.trim()
-          // SSE heartbeat comment lines (start with ':')
+          // SSE heartbeat comment lines (with ':')
           if (!trimmed || trimmed.startsWith(':')) continue
 
           if (trimmed.startsWith('event:')) {
@@ -96,6 +96,8 @@ export function streamDiscovery(
               }
             } catch (e) {
               console.error('Failed to parse SSE data:', dataStr, e)
+            } finally {
+              currentEvent = ''
             }
           }
         }

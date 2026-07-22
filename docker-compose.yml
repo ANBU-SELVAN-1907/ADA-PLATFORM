@@ -17,6 +17,10 @@ services:
       - ADA_AGENT_TIMEOUT_SEC=${ADA_AGENT_TIMEOUT_SEC:-120}
       - ADA_LLM_TEMPERATURE=${ADA_LLM_TEMPERATURE:-0.2}
       - ADA_LLM_MAX_TOKENS=${ADA_LLM_MAX_TOKENS:-8000}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET:-}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
     volumes:
       - ./output:/app/output
     healthcheck:
@@ -31,7 +35,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "8080:80"
+      - "80:80"
     depends_on:
       backend:
         condition: service_healthy
