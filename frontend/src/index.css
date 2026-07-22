@@ -17,12 +17,16 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
   }
 
   body {
     @apply bg-surface text-text-primary min-h-screen font-sans;
     background-color: var(--surface-base);
     overflow-x: hidden;
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
 
   /* Scrollbar */
@@ -276,8 +280,18 @@
   .border-infra-glow     { border-color: rgba(139,92,246,0.35); box-shadow: 0 0 10px rgba(139,92,246,0.1); }
 
   /* Scroll utilities */
-  .scroll-y { @apply overflow-y-auto; }
-  .scroll-hidden { scrollbar-width: none; }
+  .scroll-y { 
+    @apply overflow-y-auto; 
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+  .scroll-hidden { 
+    scrollbar-width: none; 
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
   .scroll-hidden::-webkit-scrollbar { display: none; }
 
   /* Grid background */
