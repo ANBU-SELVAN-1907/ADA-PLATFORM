@@ -237,7 +237,7 @@ function SecurityTab({ payload }: { payload: any }) {
                   {risk.mitigation}
                 </p>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
       </SectionCard>
