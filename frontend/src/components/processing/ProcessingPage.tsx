@@ -364,15 +364,12 @@ function TerminalPanel({ logs }: { logs: string[] }) {
   useEffect(() => {
     const container = scrollContainerRef.current
     if (container) {
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: 'smooth'
-      })
+      container.scrollTop = container.scrollHeight
     }
   }, [logs])
 
   return (
-    <div className="bg-[#03060E]/95 border border-white/8 rounded-2xl flex flex-col overflow-hidden h-full relative"
+    <div className="bg-[#03060E]/95 border border-white/8 rounded-2xl flex flex-col overflow-hidden h-full relative transform-gpu"
       style={{ boxShadow: '0 0 0 1px rgba(134,188,37,0.08), inset 0 0 40px rgba(0,0,0,0.4)' }}
     >
       {/* Header */}
@@ -398,16 +395,13 @@ function TerminalPanel({ logs }: { logs: string[] }) {
       </div>
 
       {/* Logs */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 font-mono text-[10.5px] leading-relaxed space-y-1 scroll-hidden">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 font-mono text-[10.5px] leading-relaxed space-y-1 scroll-hidden transform-gpu">
         {logs.length === 0 ? (
           <div className="flex items-center gap-2 text-text-subtle/40 italic mt-2">
             <Sparkles size={10}/><span>Warming up neural pathways...</span>
           </div>
         ) : logs.map((log, i) => (
-          <motion.div key={i} className="flex items-start gap-2"
-            initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.25 }}
-          >
+          <div key={i} className="flex items-start gap-2">
             <span className="text-text-subtle/50 shrink-0 select-none">›</span>
             <span className={
               log.includes('CRITICAL') ? 'text-rose-400' :
@@ -417,12 +411,12 @@ function TerminalPanel({ logs }: { logs: string[] }) {
             }>
               {log.split('] ')[1] || log}
             </span>
-          </motion.div>
+          </div>
         ))}
       </div>
 
       {/* Scan line */}
-      <motion.div className="absolute inset-x-0 h-px bg-discovery/8 pointer-events-none"
+      <motion.div className="absolute inset-x-0 h-px bg-discovery/8 pointer-events-none transform-gpu will-change-transform"
         animate={{ top: ['0%', '100%'] }} transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
       />
     </div>
@@ -495,7 +489,7 @@ export function ProcessingPage() {
       </motion.div>
 
       {/* Scrollable Content Wrapper */}
-      <div className="flex-grow overflow-y-auto px-4 sm:px-6 pb-8 scroll-hidden flex flex-col gap-6 relative z-10">
+      <div className="flex-grow overflow-y-auto px-4 sm:px-6 pb-8 scroll-hidden transform-gpu scroll-y flex flex-col gap-6 relative z-10">
         {/* Error */}
         <AnimatePresence>
           {error && (
