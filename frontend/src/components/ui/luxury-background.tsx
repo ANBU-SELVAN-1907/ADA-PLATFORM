@@ -1,9 +1,9 @@
-import React, { memo } from 'react'
+import React from 'react'
 import { motion } from 'framer-motion'
 
-export const LuxuryBackground = memo(function LuxuryBackground() {
+export function LuxuryBackground() {
   return (
-    <div className="fixed inset-0 overflow-hidden bg-surface-base z-0 pointer-events-none select-none transform-gpu contain-strict">
+    <div className="fixed inset-0 overflow-hidden bg-surface-base z-0 pointer-events-none select-none">
       {/* Dark Grey Base Gradient (Visible only in Dark Mode) */}
       <div className="absolute inset-0 bg-gradient-to-b from-[#030407] via-[#0A0D14] to-[#010204] opacity-95 hidden dark:block" />
 
@@ -21,7 +21,7 @@ export const LuxuryBackground = memo(function LuxuryBackground() {
 
       {/* Deloitte Green Light Leak / Ambient Glow */}
       <motion.div
-        className="absolute top-[-25%] left-[-15%] w-[65vw] h-[65vw] rounded-full blur-[90px] transform-gpu will-change-transform"
+        className="absolute top-[-25%] left-[-15%] w-[65vw] h-[65vw] rounded-full blur-[180px]"
         style={{
           background: 'radial-gradient(circle, var(--orb-color-1) 0%, transparent 70%)',
           opacity: 'var(--orb-opacity-1)',
@@ -40,7 +40,7 @@ export const LuxuryBackground = memo(function LuxuryBackground() {
 
       {/* Luxury Deep Charcoal/Grey Glow Orb */}
       <motion.div
-        className="absolute bottom-[-15%] right-[-5%] w-[55vw] h-[55vw] rounded-full blur-[80px] transform-gpu will-change-transform"
+        className="absolute bottom-[-15%] right-[-5%] w-[55vw] h-[55vw] rounded-full blur-[150px]"
         style={{
           background: 'radial-gradient(circle, var(--orb-color-2) 0%, transparent 75%)',
           opacity: 'var(--orb-opacity-2)',
@@ -59,7 +59,7 @@ export const LuxuryBackground = memo(function LuxuryBackground() {
 
       {/* Deloitte Green secondary glow to add depth */}
       <motion.div
-        className="absolute top-[40%] right-[20%] w-[45vw] h-[45vw] rounded-full blur-[100px] transform-gpu will-change-transform"
+        className="absolute top-[40%] right-[20%] w-[45vw] h-[45vw] rounded-full blur-[200px]"
         style={{
           background: 'radial-gradient(circle, var(--orb-color-1) 0%, transparent 70%)',
           opacity: 'calc(var(--orb-opacity-1) * 0.7)',
@@ -76,14 +76,14 @@ export const LuxuryBackground = memo(function LuxuryBackground() {
 
       {/* Faint White highlight leak in the center */}
       <div 
-        className="absolute top-[20%] left-[30%] w-[35vw] h-[35vw] rounded-full blur-[110px] opacity-[0.03] transform-gpu"
+        className="absolute top-[20%] left-[30%] w-[35vw] h-[35vw] rounded-full blur-[220px] opacity-[0.03]"
         style={{
           background: 'radial-gradient(circle, #FFFFFF 0%, transparent 70%)',
         }}
       />
 
       {/* Floating Deloitte Green & Grey Micro-particles */}
-      <svg className="absolute inset-0 w-full h-full opacity-[0.12] pointer-events-none">
+      <svg className="absolute inset-0 w-full h-full opacity-[0.12]">
         <pattern id="lux-dust-pattern" width="120" height="120" patternUnits="userSpaceOnUse">
           <circle cx="15" cy="25" r="0.7" fill="#FFFFFF" />
           <circle cx="65" cy="75" r="1.1" fill="#86BC25" />
@@ -93,4 +93,4 @@ export const LuxuryBackground = memo(function LuxuryBackground() {
       </svg>
     </div>
   )
-})
+}

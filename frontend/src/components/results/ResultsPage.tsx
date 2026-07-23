@@ -51,7 +51,12 @@ function SectionCard({ title, icon, children, accent = 'discovery' }: {
 }) {
   const a = ACCENTS[accent]
   return (
-    <div className={`neo-card relative overflow-hidden transform-gpu contain-content`}>
+    <motion.div
+      className={`neo-card relative overflow-hidden`}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+    >
       <div className={`absolute top-0 left-0 w-1 h-full ${a.bg}`} />
       <div className="flex items-center gap-2 mb-4">
         <div className={`w-8 h-8 rounded-lg ${a.bg10} ${a.border} flex items-center justify-center`}>
@@ -60,7 +65,7 @@ function SectionCard({ title, icon, children, accent = 'discovery' }: {
         <h3 className="text-sm font-bold text-text-primary">{title}</h3>
       </div>
       {children}
-    </div>
+    </motion.div>
   )
 }
 
@@ -91,12 +96,14 @@ function CopyButton({ text }: { text: string }) {
   }
 
   return (
-    <button
+    <motion.button
       onClick={handleCopy}
-      className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/5 transition-colors cursor-pointer"
+      className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-white/5 transition-colors"
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9 }}
     >
       {copied ? <Check size={14} className="text-discovery" /> : <Copy size={14} />}
-    </button>
+    </motion.button>
   )
 }
 
@@ -106,7 +113,7 @@ function OverviewTab({ payload }: { payload: any }) {
   if (!overview) return null
 
   return (
-    <div className="space-y-6 transform-gpu">
+    <div className="space-y-6">
       {/* Executive Summary */}
       <SectionCard title="Executive Summary" icon={<FileText size={16} className="text-discovery" />}>
         <p className="text-sm text-text-secondary leading-relaxed">{overview.executive_summary}</p>
@@ -125,9 +132,12 @@ function OverviewTab({ payload }: { payload: any }) {
       <SectionCard title="System Components" icon={<Network size={16} className="text-knowledge" />} accent="knowledge">
         <div className="space-y-2">
           {overview.logical_components?.map((comp: any, i: number) => (
-            <div
+            <motion.div
               key={i}
               className="flex items-center gap-3 p-3 rounded-xl bg-surface-elevated/30 border border-surface-border/30 hover:border-surface-border/60 transition-colors"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.05 }}
             >
               <div className="w-8 h-8 rounded-lg bg-knowledge/10 border border-knowledge/25 flex items-center justify-center shrink-0">
                 <Code2 size={14} className="text-knowledge" />
@@ -137,7 +147,7 @@ function OverviewTab({ payload }: { payload: any }) {
                 <p className="text-[11px] text-text-muted">{comp.path}</p>
               </div>
               <p className="text-[11px] text-text-secondary hidden sm:block">{comp.role_purpose}</p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </SectionCard>
@@ -146,13 +156,16 @@ function OverviewTab({ payload }: { payload: any }) {
       <SectionCard title="Architecture Graph" icon={<Network size={16} className="text-infra" />} accent="infra">
         <div className="p-4 rounded-xl bg-surface-elevated/30 border border-surface-border/30 font-mono text-xs space-y-1">
           {payload?.architecture_graph?.map((line: string, i: number) => (
-            <div
+            <motion.div
               key={i}
               className="flex items-center gap-2 text-text-secondary"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: i * 0.03 }}
             >
               <span className="text-discovery">→</span>
               <span>{line}</span>
-            </div>
+            </motion.div>
           ))}
         </div>
       </SectionCard>
@@ -166,7 +179,7 @@ function TechStackTab({ payload }: { payload: any }) {
   if (!stack) return null
 
   return (
-    <div className="space-y-6 transform-gpu">
+    <div className="space-y-6">
       <SectionCard title="Technology Stack" icon={<Code2 size={16} className="text-knowledge" />} accent="knowledge">
         <p className="text-sm text-text-secondary mb-4">{stack.stack_summary}</p>
 
@@ -182,9 +195,12 @@ function TechStackTab({ payload }: { payload: any }) {
             </thead>
             <tbody>
               {stack.tech_stack_table?.map((entry: any, i: number) => (
-                <tr
+                <motion.tr
                   key={i}
                   className="border-b border-surface-border/20 hover:bg-surface-elevated/30 transition-colors"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.03 }}
                 >
                   <td className="py-2.5 px-3 text-text-primary font-medium">{entry.layer}</td>
                   <td className="py-2.5 px-3 text-text-secondary">{entry.technology}</td>
@@ -194,7 +210,7 @@ function TechStackTab({ payload }: { payload: any }) {
                     </span>
                   </td>
                   <td className="py-2.5 px-3 text-text-secondary text-xs">{entry.usage}</td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
           </table>
@@ -210,15 +226,18 @@ function SecurityTab({ payload }: { payload: any }) {
   if (!security) return null
 
   return (
-    <div className="space-y-6 transform-gpu">
+    <div className="space-y-6">
       <SectionCard title="Security Assessment" icon={<Shield size={16} className="text-security" />} accent="security">
         <p className="text-sm text-text-secondary mb-4">{security.security_summary}</p>
 
         <div className="space-y-3">
           {security.security_risks?.map((risk: any, i: number) => (
-            <div
+            <motion.div
               key={i}
               className="p-4 rounded-xl bg-surface-elevated/30 border border-surface-border/30 hover:border-security/30 transition-colors"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
             >
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex items-center gap-2">
@@ -237,7 +256,7 @@ function SecurityTab({ payload }: { payload: any }) {
                   {risk.mitigation}
                 </p>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </SectionCard>
@@ -765,15 +784,14 @@ export function ResultsPage() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex-1 overflow-y-auto p-6 scroll-hidden transform-gpu scroll-y">
+      <div className="relative z-10 flex-1 overflow-y-auto p-6 scroll-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            className="transform-gpu space-y-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
           >
             {renderTab()}
           </motion.div>
