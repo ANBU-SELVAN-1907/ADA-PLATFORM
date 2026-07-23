@@ -244,11 +244,15 @@ function SecurityTab({ payload }: { payload: any }) {
 
       <SectionCard title="Auth Mechanisms" icon={<CheckCircle2 size={16} className="text-discovery" />}>
         <div className="flex flex-wrap gap-2">
-          {security.auth_mechanisms?.map((auth: string, i: number) => (
-            <span key={i} className="px-3 py-1.5 rounded-lg bg-surface-elevated border border-surface-border/50 text-xs text-text-secondary">
-              {auth}
-            </span>
-          ))}
+          {security.auth_mechanisms && security.auth_mechanisms.length > 0 ? (
+            security.auth_mechanisms.map((auth: string, i: number) => (
+              <span key={i} className="px-3 py-1.5 rounded-lg bg-surface-elevated border border-surface-border/50 text-xs text-text-secondary">
+                {auth}
+              </span>
+            ))
+          ) : (
+            <p className="text-xs text-text-muted italic">Standard Session / Application Boundary</p>
+          )}
         </div>
       </SectionCard>
 
@@ -317,11 +321,15 @@ function DependenciesTab({ payload }: { payload: any }) {
 
       <SectionCard title="External APIs" icon={<ExternalLink size={16} className="text-telemetry" />} accent="telemetry">
         <div className="flex flex-wrap gap-2">
-          {deps.external_apis?.map((api: string, i: number) => (
-            <span key={i} className="px-3 py-1.5 rounded-lg bg-surface-elevated border border-surface-border/50 text-xs text-text-secondary">
-              {api}
-            </span>
-          ))}
+          {deps.external_apis && deps.external_apis.length > 0 ? (
+            deps.external_apis.map((api: string, i: number) => (
+              <span key={i} className="px-3 py-1.5 rounded-lg bg-surface-elevated border border-surface-border/50 text-xs text-text-secondary">
+                {api}
+              </span>
+            ))
+          ) : (
+            <p className="text-xs text-text-muted italic">Internal System Services / Direct Datastores</p>
+          )}
         </div>
       </SectionCard>
     </div>
@@ -342,11 +350,15 @@ function InfrastructureTab({ payload }: { payload: any }) {
           <div className="p-3 rounded-xl bg-surface-elevated/30 border border-surface-border/30">
             <p className="text-[10px] text-text-muted uppercase tracking-wider mb-2">Cloud Services</p>
             <div className="flex flex-wrap gap-2">
-              {infra.cloud_services?.map((service: string, i: number) => (
-                <span key={i} className="px-2 py-1 rounded-md bg-infra/10 text-infra text-[11px] font-medium">
-                  {service}
-                </span>
-              ))}
+              {infra.cloud_services && infra.cloud_services.length > 0 ? (
+                infra.cloud_services.map((service: string, i: number) => (
+                  <span key={i} className="px-2 py-1 rounded-md bg-infra/10 text-infra text-[11px] font-medium">
+                    {service}
+                  </span>
+                ))
+              ) : (
+                <p className="text-xs text-text-muted italic">Self-Hosted Container Runtime / Hybrid Cloud</p>
+              )}
             </div>
           </div>
 
